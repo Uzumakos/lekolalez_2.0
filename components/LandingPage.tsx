@@ -25,17 +25,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
     },
     {
       id: 2,
-      image: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
-      title: 'Learn Creole, English & French',
+      image: 'https://ik.imagekit.io/tche25kem/mom_son.jpeg',
+      title: t('Une meilleure éducation pour vos enfants'),
       subtitle: 'Connect with the world through our immersive language programs designed for fast fluency.',
-      cta: 'Explore Languages'
+      cta: t('hero.cta')
     },
     {
       id: 3,
-      image: 'https://images.unsplash.com/photo-1581092921461-eab62e97a782?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
+      image: 'https://ik.imagekit.io/tche25kem/WhatsApp-Image-2024-03-29-at-7.07.42-PM.jpeg',
       title: 'Build the Future with Code',
       subtitle: 'From React to Python, get the hands-on coding experience you need to launch your career.',
-      cta: 'View Coding Courses'
+      cta: t('hero.cta')
     }
   ];
 
@@ -73,7 +73,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
                         />
                         
                         {/* Content */}
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4 pt-24 md:pt-0">
                             <motion.div 
                                 initial={{ y: 30, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
@@ -123,10 +123,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
       <section className="py-12 bg-white relative -mt-10 z-30 px-6">
         <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-xl border border-gray-100 p-8 grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-                { label: t('stats.students'), value: '12k+', icon: Users, color: 'text-brand-blue' },
+                { label: t('stats.students'), value: '2k+', icon: Users, color: 'text-brand-blue' },
                 { label: t('stats.courses'), value: '350+', icon: BookOpen, color: 'text-brand-orange' },
-                { label: t('stats.instructors'), value: '85+', icon: Award, color: 'text-purple-600' },
-                { label: t('stats.countries'), value: '15+', icon: Globe, color: 'text-green-600' },
+                { label: t('stats.instructors'), value: '5+', icon: Award, color: 'text-purple-600' },
+                { label: t('stats.countries'), value: '5+', icon: Globe, color: 'text-green-600' },
             ].map((stat, i) => (
                 <div key={i} className="flex flex-col items-center text-center">
                     <stat.icon className={`mb-3 ${stat.color}`} size={32} />

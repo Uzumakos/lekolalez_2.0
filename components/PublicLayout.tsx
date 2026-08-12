@@ -186,7 +186,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
               </div>
 
               <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                  <p className="text-slate-500 text-sm">© 2024 Lekol Alèz. {t('footer.rights')}</p>
+                  <p className="text-slate-500 text-sm">© 2025 Lekòl Alèz. {t('footer.rights')}</p>
                   <div className="flex gap-6">
                        <Link to="/admin-portal" className="text-slate-600 hover:text-slate-400 text-sm transition-colors">{t('footer.adminPortal')}</Link>
                   </div>

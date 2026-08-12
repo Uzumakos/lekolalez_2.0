@@ -61,17 +61,39 @@ export const AboutPage: React.FC<{ content: SiteContent['about'] }> = ({ content
   );
 };
 
+// Helper to get instructor name from string or object
+const getInstructorName = (instructor: any): string => {
+    if (!instructor) return 'Unknown';
+    if (typeof instructor === 'string') return instructor;
+    if (typeof instructor === 'object') {
+        return instructor.fullName || `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || 'Unknown';
+    }
+    return 'Unknown';
+};
+
+// Helper to get instructor avatar from object or generate one
+const getInstructorAvatar = (instructor: any, name: string): string => {
+    if (typeof instructor === 'object' && instructor?.avatar) {
+        return instructor.avatar;
+    }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0ea5e9&color=fff&size=200`;
+};
+
 // --- Instructors Page ---
 export const InstructorsPage: React.FC<{ content: SiteContent['instructors'], courses: Course[] }> = ({ content, courses }) => {
     // Derive unique instructors from courses
-    const uniqueInstructors = Array.from(new Set(courses.map(c => c.instructor))).map(name => {
-        const course = courses.find(c => c.instructor === name);
+    const instructorNames = courses.map(c => getInstructorName(c.instructor));
+    const uniqueNames = Array.from(new Set(instructorNames));
+
+    const uniqueInstructors = uniqueNames.map(name => {
+        const course = courses.find(c => getInstructorName(c.instructor) === name);
+        const instructorObj = course?.instructor;
         return {
             name,
-            role: 'Senior Instructor', // Mock data
-            coursesCount: courses.filter(c => c.instructor === name).length,
-            image: `https://ui-avatars.com/api/?name=${name}&background=0ea5e9&color=fff&size=200`,
-            students: courses.filter(c => c.instructor === name).reduce((acc, c) => acc + c.students, 0)
+            role: (typeof instructorObj === 'object' && instructorObj?.title) || 'Senior Instructor',
+            coursesCount: courses.filter(c => getInstructorName(c.instructor) === name).length,
+            image: getInstructorAvatar(instructorObj, name),
+            students: courses.filter(c => getInstructorName(c.instructor) === name).reduce((acc, c) => acc + c.students, 0)
         };
     });
 

@@ -8,12 +8,22 @@ interface InstructorProfilePageProps {
   courses: Course[];
 }
 
+// Helper to get instructor name from string or object
+const getInstructorName = (instructor: any): string => {
+  if (!instructor) return 'Unknown';
+  if (typeof instructor === 'string') return instructor;
+  if (typeof instructor === 'object') {
+    return instructor.fullName || `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || 'Unknown';
+  }
+  return 'Unknown';
+};
+
 export const InstructorProfilePage: React.FC<InstructorProfilePageProps> = ({ courses }) => {
   const { instructorName } = useParams<{ instructorName: string }>();
   const decodedName = decodeURIComponent(instructorName || '');
 
-  // Filter courses for this instructor
-  const instructorCourses = courses.filter(c => c.instructor === decodedName);
+  // Filter courses for this instructor (handle both string and object instructor)
+  const instructorCourses = courses.filter(c => getInstructorName(c.instructor) === decodedName);
 
   // Calculate stats
   const totalStudents = instructorCourses.reduce((acc, c) => acc + c.students, 0);
@@ -22,18 +32,25 @@ export const InstructorProfilePage: React.FC<InstructorProfilePageProps> = ({ co
     : '0.0';
   const totalReviews = instructorCourses.length * 128; // Mock multiplier based on card data
 
-  // Mock Profile Data generator
+  // Get instructor details from real data or generate mock
   const getInstructorDetails = (name: string) => {
-    // Deterministic pseudo-random based on name length/chars for demo
-    const titles = ['Senior Software Engineer', 'Language Specialist', 'Data Scientist PhD', 'Marketing Guru'];
-    const title = titles[name.length % titles.length];
-    
+    // Try to get real instructor data from courses
+    const courseWithInstructor = instructorCourses.find(c => typeof c.instructor === 'object');
+    const instructorObj = courseWithInstructor?.instructor as any;
+
+    // Default fallback title based on name
+    const defaultTitles = ['Senior Software Engineer', 'Language Specialist', 'Data Scientist PhD', 'Marketing Guru'];
+    const defaultTitle = defaultTitles[name.length % defaultTitles.length];
+
+    // Use real data if available, otherwise generate mock
+    const title = instructorObj?.title || defaultTitle;
+
     return {
         name: name,
         title: title,
-        bio: `${name} is a passionate educator with over 10 years of experience in ${title.toLowerCase().includes('data') ? 'data science and analytics' : title.toLowerCase().includes('marketing') ? 'digital marketing' : 'software development'}. They have helped thousands of students achieve their career goals through practical, hands-on learning strategies and real-world projects.`,
-        avatar: `https://ui-avatars.com/api/?name=${name}&background=0ea5e9&color=fff&size=200`,
-        location: 'Port-au-Prince, Haiti',
+        bio: instructorObj?.bio || `${name} is a passionate educator with over 10 years of experience in ${title.toLowerCase().includes('data') ? 'data science and analytics' : title.toLowerCase().includes('marketing') ? 'digital marketing' : 'software development'}. They have helped thousands of students achieve their career goals through practical, hands-on learning strategies and real-world projects.`,
+        avatar: instructorObj?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0ea5e9&color=fff&size=200`,
+        location: instructorObj?.location || 'Port-au-Prince, Haiti',
         website: `www.${name.toLowerCase().replace(/\s/g, '')}.com`
     };
   };

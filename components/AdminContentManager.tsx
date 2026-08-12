@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SiteContent, PricingPlan } from '../types';
-import { Save, Plus, Trash2, Layout, Info, Users, CreditCard, Phone, Check } from 'lucide-react';
+import { Save, Plus, Trash2, Layout, Info, Users, CreditCard, Phone, Check, Loader2, AlertCircle } from 'lucide-react';
+import { siteContentAPI } from '../services/api';
 
 interface AdminContentManagerProps {
   content: SiteContent;
@@ -11,11 +12,32 @@ export const AdminContentManager: React.FC<AdminContentManagerProps> = ({ conten
   const [activeTab, setActiveTab] = useState<'about' | 'pricing' | 'instructors' | 'contact'>('about');
   const [tempContent, setTempContent] = useState<SiteContent>(content);
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSave = () => {
-    onUpdate(tempContent);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+  const handleSave = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Save to database
+      await siteContentAPI.update({
+        about: tempContent.about,
+        pricing: tempContent.pricing,
+        instructors: tempContent.instructors,
+        contact: tempContent.contact
+      });
+
+      // Update local state
+      onUpdate(tempContent);
+
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save content');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (section: keyof SiteContent, field: string, value: any) => {
@@ -41,13 +63,22 @@ export const AdminContentManager: React.FC<AdminContentManagerProps> = ({ conten
           <h1 className="text-2xl font-bold text-gray-800">Site Content Manager</h1>
           <p className="text-gray-500">Edit public facing pages of your LMS.</p>
         </div>
-        <button 
-          onClick={handleSave}
-          className="flex items-center gap-2 px-6 py-2.5 bg-brand-blue text-white font-bold rounded-xl hover:bg-sky-600 transition-colors shadow-lg shadow-blue-500/20"
-        >
-          {isSaved ? <Check size={20} /> : <Save size={20} />}
-          {isSaved ? 'Saved!' : 'Save Changes'}
-        </button>
+        <div className="flex items-center gap-4">
+          {error && (
+            <div className="flex items-center gap-2 text-red-500 text-sm">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={isLoading}
+            className={`flex items-center gap-2 px-6 py-2.5 text-white font-bold rounded-xl transition-colors shadow-lg disabled:opacity-70 ${isSaved ? 'bg-green-500 shadow-green-500/20' : 'bg-brand-blue hover:bg-sky-600 shadow-blue-500/20'}`}
+          >
+            {isLoading ? <Loader2 size={20} className="animate-spin" /> : isSaved ? <Check size={20} /> : <Save size={20} />}
+            {isLoading ? 'Saving...' : isSaved ? 'Saved!' : 'Save Changes'}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row min-h-[600px]">

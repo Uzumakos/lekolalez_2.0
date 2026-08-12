@@ -112,7 +112,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
                  */}
                  <div 
                     ref={certificateRef}
-                    className="bg-white text-gray-800 w-[800px] h-[565px] shrink-0 relative p-12 shadow-xl border-[16px] border-double border-brand-dark/10"
+                    className="bg-white text-gray-800 w-[800px] h-[565px] shrink-0 relative p-8 shadow-xl border-[16px] border-double border-brand-dark/10"
                     style={{ fontFamily: "'Playfair Display', serif" }}
                  >
                     {/* Ornamental Corners */}
@@ -126,48 +126,56 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
 
                     <div className="h-full flex flex-col items-center justify-between text-center relative z-10">
                         {/* Logo */}
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                            <div className="h-10 w-10 bg-brand-orange rounded-lg flex items-center justify-center text-white">
-                                <Award size={24} />
-                            </div>
-                            <span className="text-2xl font-bold tracking-widest text-brand-dark font-sans">LEKOL ALÈZ</span>
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                           <img 
+                                src="https://ik.imagekit.io/tche25kem/lekolalez.jpg" 
+                                alt="Lekol Alèz" 
+                                className="h-12 w-auto object-contain rounded-md"
+                           />
+                         {/* Removed text span as it might be redundant if logo includes text, or just to save space. 
+                             If user wants text next to logo, we can keep it. The user said "add the actual logo used on the site". 
+                             Usually site logos have text. Let's assume the logo image is sufficient or compact. 
+                             Wait, the provided image shows "Lekol Alèz" text next to an icon. 
+                             The BrandLogo component used both. 
+                             Let's stick to the user request "add the actual logo". 
+                             I will use the image as the main brand element. */}
                         </div>
 
-                        <div className="flex-1 flex flex-col justify-center w-full space-y-6">
-                            <h1 className="text-5xl font-bold text-brand-blue mb-2">{t('cert.title')}</h1>
-                            <p className="text-lg text-gray-500 uppercase tracking-widest font-sans text-xs">{t('cert.presentedTo')}</p>
+                        <div className="flex-1 flex flex-col justify-center w-full space-y-2">
+                            <h1 className="text-4xl font-bold text-brand-blue mb-1">{t('cert.title')}</h1>
+                            <p className="text-sm text-gray-500 uppercase tracking-widest font-sans">{t('cert.presentedTo')}</p>
                             
-                            <div className="py-2 border-b-2 border-gray-200 w-3/4 mx-auto">
-                                <h2 className="text-6xl font-signature text-brand-dark p-4">{studentName}</h2>
+                            <div className="py-1 border-b-2 border-gray-200 w-3/4 mx-auto">
+                                <h2 className="text-5xl font-signature text-brand-dark p-2">{studentName}</h2>
                             </div>
 
-                            <p className="text-lg text-gray-500 max-w-lg mx-auto leading-relaxed">
+                            <p className="text-base text-gray-500 max-w-lg mx-auto leading-relaxed">
                                 {t('cert.message')}
                             </p>
 
-                            <h3 className="text-3xl font-bold text-gray-800">{courseTitle}</h3>
+                            <h3 className="text-2xl font-bold text-gray-800">{courseTitle}</h3>
                         </div>
 
                         {/* Footer / Signatures */}
-                        <div className="flex justify-between items-end w-full px-10 mt-8">
-                             <div className="flex flex-col items-center gap-2">
-                                 <span className="font-signature text-3xl text-brand-blue">{completionDate}</span>
-                                 <div className="h-px w-40 bg-gray-300"></div>
-                                 <span className="text-xs uppercase tracking-widest text-gray-400 font-sans">{t('cert.date')}</span>
+                        <div className="flex justify-between items-end w-full px-8 mt-4">
+                             <div className="flex flex-col items-center gap-1">
+                                 <span className="font-signature text-2xl text-brand-blue">{completionDate}</span>
+                                 <div className="h-px w-32 bg-gray-300"></div>
+                                 <span className="text-[10px] uppercase tracking-widest text-gray-400 font-sans">{t('cert.date')}</span>
                              </div>
 
                              {/* Gold Seal */}
-                             <div className="relative">
+                             <div className="relative transform scale-90">
                                  <div className="w-24 h-24 bg-brand-orange rounded-full flex items-center justify-center text-white shadow-inner border-4 border-amber-300">
                                     <Award size={40} />
                                  </div>
                                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-600 w-16 h-6 shadow-md rounded-sm -z-10"></div>
                              </div>
 
-                             <div className="flex flex-col items-center gap-2">
-                                 <span className="font-signature text-3xl text-brand-blue">{instructorName}</span>
-                                 <div className="h-px w-40 bg-gray-300"></div>
-                                 <span className="text-xs uppercase tracking-widest text-gray-400 font-sans">{t('cert.signature')}</span>
+                             <div className="flex flex-col items-center gap-1">
+                                 <span className="font-signature text-2xl text-brand-blue">{instructorName}</span>
+                                 <div className="h-px w-32 bg-gray-300"></div>
+                                 <span className="text-[10px] uppercase tracking-widest text-gray-400 font-sans">{t('cert.signature')}</span>
                              </div>
                         </div>
                     </div>

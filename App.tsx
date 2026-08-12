@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Settings, LogOut, Menu, Search, Plus, GraduationCap, Upload, X, Check, Loader2, FileVideo, Image as ImageIcon, AlertCircle, Layout as LayoutIcon } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Settings, LogOut, Menu, Search, Plus, GraduationCap, Upload, X, Check, Loader2, FileVideo, Image as ImageIcon, AlertCircle, Layout as LayoutIcon, Shield } from 'lucide-react';
 import { DashboardStats } from './components/DashboardStats';
 import { StudentDashboard } from './components/StudentDashboard';
 import { CourseCard } from './components/CourseCard';
@@ -24,7 +24,9 @@ import { NotificationDropdown } from './components/NotificationDropdown';
 import { AuthPage } from './components/AuthPage';
 import { BrandLogo } from './components/BrandLogo';
 import { CourseEditor } from './components/CourseEditor';
+import { AdminManagement } from './components/AdminManagement';
 import { generateCourseContent } from './utils/courseUtils';
+import { coursesAPI, siteContentAPI, getStoredUser, clearAuthData } from './services/api';
 
 // Mock Data
 const INITIAL_COURSES: Course[] = [
@@ -97,9 +99,9 @@ const INITIAL_SITE_CONTENT: SiteContent = {
     subtitle: "Empowering Haiti's Future Through Accessible Education",
     content: "Lekol Alèz was founded with a simple mission: to democratize education in Haiti and beyond. We believe that language should never be a barrier to learning. That's why we've built the first truly trilingual Learning Management System that seamlessly integrates English, French, and Haitian Creole.\n\nOur platform connects passionate expert instructors with eager students, fostering a community of growth, innovation, and mutual support. Whether you're looking to break into the tech industry, master a new language, or start your own business, Lekol Alèz provides the tools and guidance you need to succeed.",
     stats: [
-        { label: "Students", value: "12k+" },
+        { label: "Students", value: "2k+" },
         { label: "Courses", value: "350+" },
-        { label: "Instructors", value: "85+" },
+        { label: "Instructors", value: "5+" },
         { label: "Years", value: "5+" }
     ]
   },
@@ -132,16 +134,18 @@ const SidebarItem = ({ icon: Icon, text, path, active }: { icon: any, text: stri
   </Link>
 );
 
-const Layout = ({ 
-  children, 
-  userRole, 
+const Layout = ({
+  children,
+  userRole,
   setUserRole,
-  onLogout
-}: { 
-  children?: React.ReactNode, 
-  userRole: 'admin' | 'student', 
+  onLogout,
+  currentUser
+}: {
+  children?: React.ReactNode,
+  userRole: 'admin' | 'student',
   setUserRole: (role: 'admin' | 'student') => void,
-  onLogout: () => void
+  onLogout: () => void,
+  currentUser?: any
 }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
@@ -165,6 +169,7 @@ const Layout = ({
              <>
               <SidebarItem icon={Plus} text={t('sidebar.addCourse')} path="/add-course" active={location.pathname === '/add-course'} />
               <SidebarItem icon={LayoutIcon} text={t('sidebar.siteContent')} path="/site-content" active={location.pathname === '/site-content'} />
+              <SidebarItem icon={Shield} text="Admin Management" path="/admin-management" active={location.pathname === '/admin-management'} />
              </>
           )}
           <SidebarItem icon={Settings} text={t('sidebar.settings')} path="/settings" active={location.pathname === '/settings'} />
@@ -203,7 +208,7 @@ const Layout = ({
             <NotificationDropdown />
 
             <div className="h-8 w-8 rounded-full bg-brand-blue flex items-center justify-center text-white font-bold text-sm">
-              JD
+              {currentUser?.firstName?.[0] || 'U'}{currentUser?.lastName?.[0] || ''}
             </div>
           </div>
         </header>
@@ -217,10 +222,10 @@ const Layout = ({
   );
 };
 
-const AdminDashboardPage = () => (
+const AdminDashboardPage = ({ currentUser }: { currentUser?: any }) => (
   <div className="max-w-7xl mx-auto">
     <div className="mb-8">
-      <h1 className="text-2xl font-bold text-gray-800">Welcome back, Administrator 👋</h1>
+      <h1 className="text-2xl font-bold text-gray-800">Welcome back, {currentUser?.firstName || 'Administrator'} 👋</h1>
       <p className="text-gray-500">Here is what's happening with your courses today.</p>
     </div>
     <DashboardStats />
@@ -264,10 +269,8 @@ const CoursesPage = ({ courses, isLoading, userRole }: { courses: Course[], isLo
 );
 
 export default function App() {
-  const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES.map(c => ({
-      ...c,
-      moduleList: generateCourseContent(c.id, c.modules) // Hydrate mock data
-  })));
+  // Start with empty courses, will load from database
+  const [courses, setCourses] = useState<Course[]>([]);
   
   const [categories, setCategories] = useState(['Development', 'Business', 'Design', 'Language', 'Data Science', 'Marketing']);
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]);
@@ -280,12 +283,108 @@ export default function App() {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<'admin' | 'student'>('student');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  // Check for existing auth on mount
   useEffect(() => {
-    // Simulate fetching data
-    const timer = setTimeout(() => setIsLoading(false), 2000);
-    return () => clearTimeout(timer);
+    const storedUser = getStoredUser();
+    if (storedUser) {
+      setIsAuthenticated(true);
+      setCurrentUser(storedUser);
+      setUserRole(storedUser.role === 'admin' || storedUser.role === 'instructor' ? 'admin' : 'student');
+    }
+  }, []);
+
+  // Fetch courses from database
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        // Include unpublished courses for admin users
+        const storedUser = getStoredUser();
+        const isAdmin = storedUser?.role === 'admin' || storedUser?.role === 'instructor';
+        const response = await coursesAPI.getAll({
+          limit: 50,
+          ...(isAdmin ? { includeUnpublished: 'true' } : {})
+        });
+        if (response.courses && response.courses.length > 0) {
+          // Map MongoDB courses to frontend format
+          const dbCourses = response.courses.map((c: any) => ({
+            id: c._id,
+            title: c.title,
+            description: c.description,
+            instructor: c.instructor || 'Unknown',
+            thumbnail: c.thumbnail || 'https://picsum.photos/400/250?random=' + c._id,
+            duration: c.totalDuration || '0h',
+            students: c.enrollmentCount || 0,
+            rating: c.rating?.average || 0,
+            modules: c.modules?.length || 0,
+            category: c.category,
+            price: c.price || 0,
+            level: c.level,
+            tags: c.tags || [],
+            prerequisites: c.prerequisites || [],
+            objectives: c.objectives || [],
+            moduleList: c.modules?.map((m: any) => ({
+              id: m._id || m.id,
+              title: m.title,
+              lessons: m.lessons?.map((l: any) => ({
+                id: l._id || l.id,
+                title: l.title,
+                type: l.type,
+                duration: l.duration,
+                videoUrl: l.videoUrl,
+                content: l.content,
+                description: l.description,
+                quizData: l.quizData
+              })) || []
+            })) || []
+          }));
+
+          // Use only database courses
+          setCourses(dbCourses);
+        } else {
+          // Fall back to mock data only if no database courses exist
+          console.log('No courses in database, using mock data for demo');
+          setCourses(INITIAL_COURSES.map(c => ({
+            ...c,
+            moduleList: generateCourseContent(c.id, c.modules)
+          })));
+        }
+      } catch (error) {
+        // Fall back to mock data if server is not running
+        console.log('Using local course data (server may not be running)');
+        setCourses(INITIAL_COURSES.map(c => ({
+          ...c,
+          moduleList: generateCourseContent(c.id, c.modules)
+        })));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  // Fetch site content from database
+  useEffect(() => {
+    const fetchSiteContent = async () => {
+      try {
+        const response = await siteContentAPI.get();
+        if (response.content && !response.isDefault) {
+          setSiteContent({
+            about: response.content.about || INITIAL_SITE_CONTENT.about,
+            pricing: response.content.pricing || INITIAL_SITE_CONTENT.pricing,
+            instructors: response.content.instructors || INITIAL_SITE_CONTENT.instructors,
+            contact: response.content.contact || INITIAL_SITE_CONTENT.contact
+          });
+        }
+      } catch (error) {
+        console.log('Using default site content (server may not be running)');
+      }
+    };
+
+    fetchSiteContent();
   }, []);
 
   const handleEnroll = (courseId: string) => {
@@ -324,18 +423,22 @@ export default function App() {
       });
   };
 
-  const handleStudentLogin = () => {
+  const handleStudentLogin = (user: any) => {
     setIsAuthenticated(true);
-    setUserRole('student');
+    setCurrentUser(user);
+    setUserRole(user.role === 'admin' || user.role === 'instructor' ? 'admin' : 'student');
   };
 
-  const handleAdminLogin = () => {
+  const handleAdminLogin = (user: any) => {
     setIsAuthenticated(true);
+    setCurrentUser(user);
     setUserRole('admin');
   };
 
   const handleLogout = () => {
+    clearAuthData();
     setIsAuthenticated(false);
+    setCurrentUser(null);
     setUserRole('student');
   };
 
@@ -395,46 +498,55 @@ export default function App() {
             {/* Protected Routes (Dashboard) */}
             {isAuthenticated && (
                 <Route path="/*" element={
-                    <Layout userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout}>
+                    <Layout userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} currentUser={currentUser}>
                         <Routes>
                             <Route path="/" element={
                                 userRole === 'admin' ? (
-                                    <AdminDashboardPage />
+                                    <AdminDashboardPage currentUser={currentUser} />
                                 ) : (
-                                    <StudentDashboard 
-                                        courses={courses} 
-                                        enrolledCourseIds={enrolledCourseIds} 
-                                        completedLessons={completedLessons} 
+                                    <StudentDashboard
+                                        courses={courses}
+                                        enrolledCourseIds={enrolledCourseIds}
+                                        completedLessons={completedLessons}
                                         isLoading={isLoading}
+                                        currentUser={currentUser}
                                     />
                                 )
                             } />
                             <Route path="/courses" element={<CoursesPage courses={courses} isLoading={isLoading} userRole={userRole} />} />
-                            <Route 
-                                path="/courses/:courseId" 
+                            <Route
+                                path="/courses/:courseId"
                                 element={
-                                <CourseDetailsPage 
-                                    courses={courses} 
+                                <CourseDetailsPage
+                                    courses={courses}
                                     enrolledCourseIds={enrolledCourseIds}
                                     completedLessons={completedLessons}
                                     onEnroll={handleEnroll}
                                     onToggleLesson={handleToggleLesson}
+                                    currentUser={currentUser}
                                 />
-                                } 
+                                }
                             />
                             <Route 
                                 path="/instructor/:instructorName"
                                 element={<InstructorProfilePage courses={courses} />}
                             />
-                            <Route 
-                                path="/settings" 
-                                element={<SettingsPage userRole={userRole} />} 
+                            <Route
+                                path="/settings"
+                                element={
+                                  <SettingsPage
+                                    userRole={userRole}
+                                    currentUser={currentUser}
+                                    onUserUpdate={(user) => setCurrentUser(user)}
+                                  />
+                                }
                             />
                             {userRole === 'admin' && (
                                 <>
                                     <Route path="/add-course" element={<CourseEditor courses={courses} onSave={handleSaveCourse} categories={categories} onAddCategory={c => setCategories(prev => [...prev, c])} />} />
                                     <Route path="/edit-course/:courseId" element={<CourseEditor courses={courses} onSave={handleSaveCourse} categories={categories} onAddCategory={c => setCategories(prev => [...prev, c])} />} />
                                     <Route path="/site-content" element={<AdminContentManager content={siteContent} onUpdate={setSiteContent} />} />
+                                    <Route path="/admin-management" element={<AdminManagement />} />
                                 </>
                             )}
                             <Route path="*" element={<div className="p-10 text-center text-gray-500">Page not found 🚧</div>} />

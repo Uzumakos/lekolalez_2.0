@@ -1,16 +1,16 @@
-const User = require('./User');
-const Course = require('./Course');
-const Enrollment = require('./Enrollment');
-const LessonProgress = require('./LessonProgress');
-const QuizAttempt = require('./QuizAttempt');
-const Certificate = require('./Certificate');
-const Notification = require('./Notification');
-const ChatHistory = require('./ChatHistory');
-const SiteContent = require('./SiteContent');
-const PricingPlan = require('./PricingPlan');
-const Subscription = require('./Subscription');
+import User from './User.js';
+import Course from './Course.js';
+import Enrollment from './Enrollment.js';
+import LessonProgress from './LessonProgress.js';
+import QuizAttempt from './QuizAttempt.js';
+import Certificate from './Certificate.js';
+import Notification from './Notification.js';
+import ChatHistory from './ChatHistory.js';
+import SiteContent from './SiteContent.js';
+import PricingPlan from './PricingPlan.js';
+import Subscription from './Subscription.js';
 
-module.exports = {
+export {
   User,
   Course,
   Enrollment,

@@ -2,10 +2,14 @@ import { GoogleGenAI, Chat } from "@google/genai";
 import { Course } from "../types";
 import { getCourseProgress } from "../utils/courseUtils";
 
-// Initialize the client
-// NOTE: In a real app, ensure process.env.API_KEY is available.
-// The runtime environment injects this.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize the client with Vite's environment variable syntax
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!apiKey) {
+  console.warn('VITE_GEMINI_API_KEY is not set. AI assistant features will be disabled.');
+}
+
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const createLMSChatSession = (
   courses: Course[],
@@ -63,6 +67,10 @@ export const createLMSChatSession = (
        - If asked about "Lekol Alèz", mention it means "School at Ease" or learning comfortably.
        - Use emojis occasionally.
   `;
+
+  if (!ai) {
+    throw new Error('AI service is not available. Please set VITE_GEMINI_API_KEY in your .env file.');
+  }
 
   return ai.chats.create({
     model: 'gemini-2.5-flash',

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Mail, ArrowRight, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authAPI, setAuthData } from '../services/api';
 
 interface AdminLoginPageProps {
-  onLogin: () => void;
+  onLogin: (user: any) => void;
 }
 
 export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
@@ -12,22 +13,33 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Mock Admin Auth Logic
-    setTimeout(() => {
-        // Simple mock validation
-        if (email.includes('admin') || password === 'admin') {
-            onLogin();
-        } else {
-            setError('Invalid credentials. Access denied.');
-            setIsLoading(false);
-        }
-    }, 1500);
+    try {
+      const response = await authAPI.login({ email, password });
+
+      // Check if user is admin or instructor
+      if (response.user.role !== 'admin' && response.user.role !== 'instructor') {
+        setError('Access denied. Admin or instructor role required.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Store token and user data
+      setAuthData(response.token, response.user);
+
+      // Call parent callback with user data
+      onLogin(response.user);
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Invalid credentials. Access denied.');
+      setIsLoading(false);
+    }
   };
 
   return (

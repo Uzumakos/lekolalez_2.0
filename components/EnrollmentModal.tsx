@@ -17,6 +17,18 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({ isOpen, onClos
   const navigate = useNavigate();
   const { t } = useLanguage();
 
+  // Helper to get instructor name from string or object
+  const getInstructorName = () => {
+    const inst = course.instructor;
+    if (!inst) return 'Unknown';
+    if (typeof inst === 'string') return inst;
+    if (typeof inst === 'object') {
+      const instObj = inst as any;
+      return instObj.fullName || `${instObj.firstName || ''} ${instObj.lastName || ''}`.trim() || 'Unknown';
+    }
+    return 'Unknown';
+  };
+
   const handleConfirm = async () => {
     setStep('processing');
     // Simulate API call processing time
@@ -72,7 +84,7 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({ isOpen, onClos
                     />
                     <div>
                       <h4 className="font-semibold text-gray-800 line-clamp-2">{course.title}</h4>
-                      <p className="text-sm text-gray-500 mt-1">by {course.instructor}</p>
+                      <p className="text-sm text-gray-500 mt-1">by {getInstructorName()}</p>
                       <p className="text-brand-blue font-bold mt-1">
                         {price === 0 ? t('course.free') : `$${price.toFixed(2)}`}
                       </p>

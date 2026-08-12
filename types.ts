@@ -40,6 +40,7 @@ export interface Lesson {
   description?: string;
   videoUrl?: string; // URL for YouTube or uploaded video
   quizData?: QuizData; // Optional: if type is quiz
+  content?: string; // Optional: content for reading type lessons
 }
 
 export interface Module {
@@ -52,7 +53,7 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  instructor: string;
+  instructor: string | { firstName?: string; lastName?: string; fullName?: string; title?: string; avatar?: string };
   thumbnail: string;
   duration: string;
   students: number;
@@ -63,6 +64,7 @@ export interface Course {
   price: number;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   prerequisites?: string[];
+  objectives?: string[];
   tags?: string[];
   videoPreview?: string;
 }

@@ -30,7 +30,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ variant = 'dark', classNam
       </div>
       
       {showText && (
-        <span className={`text-2xl font-bold font-sans tracking-tight ${textColor}`}>
+        <span className={`text-lg md:text-2xl font-bold font-sans tracking-tight ${textColor}`}>
             LEKOL <span className="text-brand-blue">ALÈZ</span>
         </span>
       )}

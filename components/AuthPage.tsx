@@ -5,10 +5,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { BrandLogo } from './BrandLogo';
+import { authAPI, setAuthData } from '../services/api';
 
 interface AuthPageProps {
   initialMode?: 'signin' | 'signup';
-  onLogin: () => void;
+  onLogin: (user: any) => void;
 }
 
 export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'signin', onLogin }) => {
@@ -29,22 +30,44 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'signin', onLo
     setMode(initialMode);
   }, [initialMode]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      if (formData.email === 'admin@lekol.com') {
-         setError('Please use the Admin Portal for instructor access.');
-         setIsLoading(false);
-         return;
+    try {
+      let response;
+
+      if (mode === 'signup') {
+        // Split name into first and last name
+        const nameParts = formData.name.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        response = await authAPI.register({
+          email: formData.email,
+          password: formData.password,
+          firstName,
+          lastName,
+          role: 'student'
+        });
+      } else {
+        response = await authAPI.login({
+          email: formData.email,
+          password: formData.password
+        });
       }
-      
+
+      // Store token and user data
+      setAuthData(response.token, response.user);
+
+      // Call parent callback with user data
+      onLogin(response.user);
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please try again.');
       setIsLoading(false);
-      onLogin(); 
-      navigate('/'); 
-    }, 1500);
+    }
   };
 
   return (

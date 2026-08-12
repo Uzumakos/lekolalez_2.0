@@ -12,13 +12,19 @@ interface StudentDashboardProps {
   enrolledCourseIds: string[];
   completedLessons: Record<string, string[]>;
   isLoading?: boolean;
+  currentUser?: {
+    firstName?: string;
+    lastName?: string;
+    fullName?: string;
+  } | null;
 }
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
-  courses, 
-  enrolledCourseIds, 
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({
+  courses,
+  enrolledCourseIds,
   completedLessons,
-  isLoading = false
+  isLoading = false,
+  currentUser
 }) => {
   const { t } = useLanguage();
   const enrolledCourses = courses.filter(c => enrolledCourseIds.includes(c.id));
@@ -38,7 +44,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">{t('dashboard.welcome')} Student 👋</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('dashboard.welcome')} {currentUser?.firstName || 'Student'} 👋</h1>
           <p className="text-gray-500">{t('dashboard.subtitle')}</p>
         </div>
         <div className="flex gap-3">

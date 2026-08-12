@@ -11,7 +11,21 @@ interface CourseCardProps {
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
   const { t } = useLanguage();
-  
+
+  // Helper to get instructor name from string or object
+  const getInstructorName = () => {
+    const inst = course.instructor;
+    if (!inst) return 'Unknown';
+    if (typeof inst === 'string') return inst;
+    if (typeof inst === 'object') {
+      const instObj = inst as any;
+      return instObj.fullName || `${instObj.firstName || ''} ${instObj.lastName || ''}`.trim() || 'Unknown';
+    }
+    return 'Unknown';
+  };
+
+  const instructorName = getInstructorName();
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -40,8 +54,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
              <Star size={14} fill="#f59e0b" className="mr-1" />
              <span className="font-semibold">{course.rating}</span>
            </div>
-           <Link to={`/instructor/${encodeURIComponent(course.instructor)}`} className="text-gray-400 text-xs hover:text-brand-blue transition-colors">
-              {t('course.by')} {course.instructor}
+           <Link to={`/instructor/${encodeURIComponent(instructorName)}`} className="text-gray-400 text-xs hover:text-brand-blue transition-colors">
+              {t('course.by')} {instructorName}
            </Link>
         </div>
         <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-1">{course.title}</h3>

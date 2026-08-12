@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { EnrollmentModal } from './EnrollmentModal';
 import { VideoPlayer } from './VideoPlayer';
 import { CertificateModal } from './CertificateModal';
+import { QuizPlayer } from './QuizPlayer';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -16,14 +17,20 @@ interface CourseDetailsPageProps {
   completedLessons: Record<string, string[]>;
   onEnroll: (courseId: string) => void;
   onToggleLesson: (courseId: string, lessonId: string) => void;
+  currentUser?: {
+    firstName?: string;
+    lastName?: string;
+    fullName?: string;
+  } | null;
 }
 
-export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({ 
-  courses, 
-  enrolledCourseIds, 
-  completedLessons, 
-  onEnroll, 
-  onToggleLesson 
+export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({
+  courses,
+  enrolledCourseIds,
+  completedLessons,
+  onEnroll,
+  onToggleLesson,
+  currentUser
 }) => {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -38,15 +45,59 @@ export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({
   const isEnrolled = courseId ? enrolledCourseIds.includes(courseId) : false;
   const courseCompletedLessons = courseId ? (completedLessons[courseId] || []) : [];
 
+  // Helper to get instructor info (handles both string and object)
+  const getInstructorInfo = () => {
+    if (!course) return { name: 'Unknown', title: 'Instructor', avatar: '' };
+    const inst = course.instructor;
+    if (typeof inst === 'object' && inst !== null) {
+      const instObj = inst as any;
+      return {
+        name: instObj.fullName || `${instObj.firstName || ''} ${instObj.lastName || ''}`.trim() || 'Unknown',
+        title: instObj.title || 'Instructor',
+        avatar: instObj.avatar || `https://ui-avatars.com/api/?name=${instObj.firstName || 'I'}&background=0ea5e9&color=fff`
+      };
+    }
+    return {
+      name: String(inst),
+      title: 'Instructor',
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(String(inst))}&background=0ea5e9&color=fff`
+    };
+  };
+
+  const instructorInfo = getInstructorInfo();
+
   const modules = useMemo(() => {
     if (!course) return [];
+    // Use real moduleList from database if available, otherwise generate dummy content
+    if (course.moduleList && course.moduleList.length > 0) {
+      return course.moduleList.map((mod: any, modIdx: number) => ({
+        id: mod.id || mod._id || `module-${modIdx}`,
+        title: mod.title || `Module ${modIdx + 1}`,
+        lessons: (mod.lessons || []).map((lesson: any, lessonIdx: number) => ({
+          id: lesson.id || lesson._id || `lesson-${modIdx}-${lessonIdx}`,
+          title: lesson.title || `Lesson ${lessonIdx + 1}`,
+          type: lesson.type || 'video',
+          duration: lesson.duration || '10:00',
+          description: lesson.description || lesson.content || 'No description available.',
+          videoUrl: lesson.videoUrl || '',
+          content: lesson.content || '',
+          quizData: lesson.quizData || null
+        }))
+      }));
+    }
+    // Fall back to generated content for courses without real modules
     return generateCourseContent(course.id, course.modules);
   }, [course]);
 
   const { percentage: progressPercentage, total: totalLessons } = useMemo(() => {
      if (!course) return { percentage: 0, total: 0 };
-     return getCourseProgress(course.id, course.modules, courseCompletedLessons);
-  }, [course, courseCompletedLessons]);
+     // Calculate progress based on actual modules
+     const total = modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
+     if (total === 0) return { percentage: 0, total: 0 };
+     const completed = courseCompletedLessons.length;
+     const percentage = Math.round((completed / total) * 100);
+     return { percentage: Math.min(percentage, 100), total };
+  }, [course, modules, courseCompletedLessons]);
 
   // Flatten lessons to find active lesson object
   const allLessons = useMemo(() => modules.flatMap(m => m.lessons), [modules]);
@@ -121,16 +172,43 @@ export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({
              {activeLesson ? (
                  <div className="animate-in fade-in duration-500">
                      <div className="p-1">
-                        <VideoPlayer 
-                            poster={course.thumbnail} 
-                            title={activeLesson.title} 
-                            autoPlay={true}
+                        {activeLesson.type === 'quiz' && activeLesson.quizData ? (
+                          <QuizPlayer
+                            quizData={activeLesson.quizData}
                             onComplete={() => {
-                                if (courseId && !courseCompletedLessons.includes(activeLesson.id)) {
-                                    onToggleLesson(courseId, activeLesson.id);
-                                }
+                              if (courseId && !courseCompletedLessons.includes(activeLesson.id)) {
+                                onToggleLesson(courseId, activeLesson.id);
+                              }
                             }}
-                        />
+                          />
+                        ) : activeLesson.type === 'reading' ? (
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 min-h-[300px]">
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="bg-blue-100 p-3 rounded-xl">
+                                <FileText size={24} className="text-brand-blue" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-gray-900">Reading Material</h3>
+                                <p className="text-sm text-gray-500">{activeLesson.duration} read</p>
+                              </div>
+                            </div>
+                            <div className="prose prose-sm max-w-none text-gray-700 bg-white rounded-xl p-6 shadow-sm">
+                              {activeLesson.content || activeLesson.description || 'No content available for this reading.'}
+                            </div>
+                          </div>
+                        ) : (
+                          <VideoPlayer
+                              poster={course.thumbnail}
+                              title={activeLesson.title}
+                              videoUrl={activeLesson.videoUrl}
+                              autoPlay={true}
+                              onComplete={() => {
+                                  if (courseId && !courseCompletedLessons.includes(activeLesson.id)) {
+                                      onToggleLesson(courseId, activeLesson.id);
+                                  }
+                              }}
+                          />
+                        )}
                      </div>
                      <div className="p-6">
                         <div className="flex items-start justify-between mb-4">
@@ -218,25 +296,28 @@ export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({
           {/* Instructor & Stats */}
           {!activeLesson && (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Link to={`/instructor/${encodeURIComponent(course.instructor)}`} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm block hover:border-brand-blue/30 transition-colors group">
+                <Link to={`/instructor/${encodeURIComponent(instructorInfo.name)}`} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm block hover:border-brand-blue/30 transition-colors group">
                     <h3 className="font-bold text-gray-800 mb-4 group-hover:text-brand-blue transition-colors">{t('details.instructor')}</h3>
                     <div className="flex items-center gap-4">
                         <div className="h-14 w-14 bg-gray-200 rounded-full overflow-hidden">
-                            <img src={`https://ui-avatars.com/api/?name=${course.instructor}&background=0ea5e9&color=fff`} alt={course.instructor} className="w-full h-full object-cover" />
+                            <img src={instructorInfo.avatar} alt={instructorInfo.name} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-gray-900 group-hover:text-brand-blue transition-colors">{course.instructor}</h4>
-                            <p className="text-brand-blue text-sm">Senior Lecturer</p>
+                            <h4 className="font-bold text-gray-900 group-hover:text-brand-blue transition-colors">{instructorInfo.name}</h4>
+                            <p className="text-brand-blue text-sm">{instructorInfo.title}</p>
                         </div>
                     </div>
                 </Link>
                 <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                     <h3 className="font-bold text-gray-800 mb-4">{t('details.whatLearn')}</h3>
                     <ul className="space-y-2">
-                        {[1, 2, 3].map((i) => (
+                        {(course.objectives && course.objectives.length > 0
+                          ? course.objectives
+                          : ['Comprehensive understanding of core concepts', 'Practical skills you can apply immediately', 'Industry best practices and techniques']
+                        ).slice(0, 5).map((objective, i) => (
                             <li key={i} className="flex gap-2 text-sm text-gray-600">
                                 <CheckCircle size={16} className="text-green-500 shrink-0 mt-0.5" />
-                                <span>Comprehensive understanding of core concepts.</span>
+                                <span>{objective}</span>
                             </li>
                         ))}
                     </ul>
@@ -332,7 +413,74 @@ export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({
                 </div>
             )}
 
+            {/* Course Details Panel */}
+            {!activeLesson && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <h3 className="font-bold text-gray-800 text-base">{t('details.courseDetails') || 'Course details'}</h3>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {/* Duration */}
+                  <li className="flex items-center justify-between px-5 py-3 text-sm">
+                    <span className="flex items-center gap-2.5 text-gray-500">
+                      <Clock size={16} className="text-gray-400" />
+                      {t('details.duration') || 'Durée'}
+                    </span>
+                    <span className="font-bold text-gray-900">{course.totalDuration || course.duration || '—'}</span>
+                  </li>
+                  {/* Lectures */}
+                  <li className="flex items-center justify-between px-5 py-3 text-sm">
+                    <span className="flex items-center gap-2.5 text-gray-500">
+                      <BookOpen size={16} className="text-gray-400" />
+                      {t('details.lectures') || 'Conférences'}
+                    </span>
+                    <span className="font-bold text-gray-900">
+                      {course.totalLessons ||
+                        modules.reduce((acc, m) => acc + m.lessons.filter(l => l.type !== 'quiz').length, 0) || '—'}
+                    </span>
+                  </li>
+                  {/* Video */}
+                  <li className="flex items-center justify-between px-5 py-3 text-sm">
+                    <span className="flex items-center gap-2.5 text-gray-500">
+                      <PlayCircle size={16} className="text-gray-400" />
+                      {t('details.video') || 'Vidéo'}
+                    </span>
+                    <span className="font-bold text-gray-900">{course.totalDuration || course.duration || '—'}</span>
+                  </li>
+                  {/* Quizzes */}
+                  <li className="flex items-center justify-between px-5 py-3 text-sm">
+                    <span className="flex items-center gap-2.5 text-gray-500">
+                      <CheckSquare size={16} className="text-gray-400" />
+                      {t('details.quizzes') || 'Quizz'}
+                    </span>
+                    <span className="font-bold text-gray-900">
+                      {modules.reduce((acc, m) => acc + m.lessons.filter(l => l.type === 'quiz').length, 0) || '0'}
+                    </span>
+                  </li>
+                  {/* Level */}
+                  <li className="flex items-center justify-between px-5 py-3 text-sm">
+                    <span className="flex items-center gap-2.5 text-gray-500">
+                      <Trophy size={16} className="text-gray-400" />
+                      {t('details.level') || 'Niveau'}
+                    </span>
+                    <span className="font-bold text-gray-900">{course.level || '—'}</span>
+                  </li>
+                  {/* Lifetime Access */}
+                  <li className="flex items-center gap-2.5 px-5 py-3 text-sm text-gray-500">
+                    <Clock size={16} className="text-gray-400 shrink-0" />
+                    {t('details.lifetimeAccess') || 'Accès complet à vie'}
+                  </li>
+                  {/* Mobile Access */}
+                  <li className="flex items-center gap-2.5 px-5 py-3 text-sm text-gray-500">
+                    <Globe size={16} className="text-gray-400 shrink-0" />
+                    {t('details.mobileAccess') || 'Accès sur le mobile et la télévision'}
+                  </li>
+                </ul>
+              </div>
+            )}
+
             {/* Course Content List (Syllabus) */}
+
             <div className="space-y-4">
                 <h3 className="text-lg font-bold text-gray-800 px-1">{t('details.content')}</h3>
                 <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -413,12 +561,12 @@ export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({
       course={course} 
     />
     
-    <CertificateModal 
+    <CertificateModal
         isOpen={isCertificateModalOpen}
         onClose={() => setIsCertificateModalOpen(false)}
-        studentName="Jean Doe"
+        studentName={currentUser?.fullName || `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || 'Student'}
         courseTitle={course.title}
-        instructorName={course.instructor}
+        instructorName={instructorInfo.name}
         completionDate={new Date().toLocaleDateString()}
     />
     </>

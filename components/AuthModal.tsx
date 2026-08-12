@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { authAPI, setAuthData } from '../services/api';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: () => void;
+  onLogin: (user: any) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
@@ -22,23 +23,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
     password: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Mock Authentication Logic
-    setTimeout(() => {
-      if (formData.email === 'admin@lekol.com') {
-         setError('Please use the Admin Portal for instructor access.');
-         setIsLoading(false);
-         return;
+    try {
+      let response;
+
+      if (mode === 'signup') {
+        const nameParts = formData.name.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        response = await authAPI.register({
+          email: formData.email,
+          password: formData.password,
+          firstName,
+          lastName,
+          role: 'student'
+        });
+      } else {
+        response = await authAPI.login({
+          email: formData.email,
+          password: formData.password
+        });
       }
-      
+
+      // Store token and user data
+      setAuthData(response.token, response.user);
+
       setIsLoading(false);
-      onLogin(); // Trigger success in parent
+      onLogin(response.user);
       onClose();
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   const toggleMode = () => {

@@ -5,6 +5,7 @@ import { Course, Module, Lesson, QuizData } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { QuizBuilder } from './QuizBuilder';
 import { motion, AnimatePresence } from 'framer-motion';
+import { coursesAPI } from '../services/api';
 
 interface CourseEditorProps {
   courses: Course[];
@@ -172,36 +173,111 @@ export const CourseEditor: React.FC<CourseEditorProps> = ({ courses, onSave, cat
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
-    // Simulate API upload
-    setTimeout(() => {
+
+    try {
+      // Prepare course data for API
+      const courseData = {
+        title: formData.title || '',
+        description: formData.description || '',
+        shortDescription: formData.description?.substring(0, 300),
+        category: mapCategory(formData.category || 'Development'),
+        level: formData.level || 'Beginner',
+        price: Number(formData.price) || 0,
+        thumbnail: thumbnail ? URL.createObjectURL(thumbnail) : formData.thumbnail || '',
+        totalDuration: formData.duration,
+        // Publish course by default when created by admin
+        isPublished: true,
+        status: 'published',
+        modules: formData.moduleList?.map((mod, modIdx) => ({
+          title: mod.title,
+          description: '',
+          order: modIdx,
+          lessons: mod.lessons.map((lesson, lessonIdx) => {
+            // Clean up quiz data - filter out empty questions and options
+            let cleanedQuizData = lesson.quizData;
+            if (lesson.quizData && lesson.quizData.questions) {
+              cleanedQuizData = {
+                ...lesson.quizData,
+                questions: lesson.quizData.questions
+                  .filter((q: any) => q.text && q.text.trim()) // Only keep questions with text
+                  .map((q: any) => ({
+                    ...q,
+                    options: (q.options || [])
+                      .filter((opt: any) => opt.text && opt.text.trim()) // Only keep options with text
+                      .map((opt: any) => ({
+                        id: opt.id || String(Math.random()),
+                        text: opt.text,
+                        isCorrect: opt.isCorrect || false
+                      }))
+                  }))
+              };
+            }
+
+            return {
+              title: lesson.title,
+              description: lesson.description || '',
+              type: lesson.type,
+              duration: lesson.duration,
+              videoUrl: lesson.videoUrl,
+              content: lesson.content,
+              quizData: cleanedQuizData,
+              order: lessonIdx,
+              isFree: lessonIdx === 0 && modIdx === 0 // First lesson free
+            };
+          })
+        })) || [],
+        tags: formData.tags || [],
+        prerequisites: formData.prerequisites || []
+      };
+
+      let savedCourse;
+      if (isEditMode && courseId) {
+        // Update existing course
+        const response = await coursesAPI.update(courseId, courseData);
+        savedCourse = response.course;
+      } else {
+        // Create new course
+        const response = await coursesAPI.create(courseData);
+        savedCourse = response.course;
+      }
+
       setIsSubmitting(false);
       setShowSuccess(true);
-      
+
+      // Also update local state for immediate UI feedback
       const courseToSave: Course = {
           ...formData as Course,
-          price: Number(formData.price), // Fix: Convert string from input to number
-          modules: formData.moduleList?.length || 0, // Sync count
-          // In real app, we would upload files and get URLs here
+          id: savedCourse._id || savedCourse.id,
+          price: Number(formData.price),
+          modules: formData.moduleList?.length || 0,
           thumbnail: thumbnail ? URL.createObjectURL(thumbnail) : formData.thumbnail || '',
-          // Add default values for required fields if missing
           instructor: formData.instructor || 'Administrator',
           students: formData.students || 0,
           rating: formData.rating || 0,
           level: formData.level || 'Beginner',
           tags: formData.tags || [],
       };
-      
+
       onSave(courseToSave);
-      
+
       setTimeout(() => {
           navigate('/courses');
       }, 1500);
-    }, 2000);
+    } catch (error: any) {
+      setIsSubmitting(false);
+      setErrors({ submit: error.message || 'Failed to save course' });
+      console.error('Error saving course:', error);
+    }
+  };
+
+  // Helper to get category - now accepts any category string
+  const mapCategory = (category: string): string => {
+    return category?.trim() || 'Other';
   };
 
   if (showQuizBuilder) {

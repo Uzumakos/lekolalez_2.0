@@ -5,17 +5,39 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface VideoPlayerProps {
   poster: string;
   title: string;
+  videoUrl?: string;
   autoPlay?: boolean;
   onComplete?: () => void;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ poster, title, autoPlay = false, onComplete }) => {
+// Helper function to detect YouTube URLs and extract video ID
+const getYouTubeVideoId = (url: string): string | null => {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+const DEFAULT_VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-monitor-close-up-1728-large.mp4";
+
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ poster, title, videoUrl, autoPlay = false, onComplete }) => {
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [progress, setProgress] = useState(0);
   const [isObscured, setIsObscured] = useState(false);
   const [securityMessage, setSecurityMessage] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Determine if URL is YouTube
+  const youtubeVideoId = videoUrl ? getYouTubeVideoId(videoUrl) : null;
+  const isYouTubeVideo = !!youtubeVideoId;
+  const effectiveVideoUrl = videoUrl || DEFAULT_VIDEO_URL;
 
   // --- SECURITY FEATURES ---
 
@@ -193,27 +215,39 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ poster, title, autoPla
       <div className="absolute inset-0 z-[5]" />
 
       {/* Main Video Area */}
-      <div 
+      <div
         className="absolute inset-0 flex items-center justify-center bg-black cursor-pointer"
-        onClick={() => togglePlay()}
+        onClick={() => !isYouTubeVideo && togglePlay()}
       >
-        <video
-            ref={videoRef}
-            src="https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-monitor-close-up-1728-large.mp4"
-            className="w-full h-full object-cover"
-            poster={poster}
-            onTimeUpdate={handleTimeUpdate}
-            onEnded={handleVideoEnded}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            playsInline
-            controlsList="nodownload"
-        />
-        
-        {/* Play Button Overlay */}
-        {!isPlaying && !isObscured && (
+        {isYouTubeVideo ? (
+          // YouTube Embed
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=${autoPlay ? 1 : 0}&rel=0&modestbranding=1`}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={title}
+          />
+        ) : (
+          // Regular Video
+          <video
+              ref={videoRef}
+              src={effectiveVideoUrl}
+              className="w-full h-full object-cover"
+              poster={poster}
+              onTimeUpdate={handleTimeUpdate}
+              onEnded={handleVideoEnded}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              playsInline
+              controlsList="nodownload"
+          />
+        )}
+
+        {/* Play Button Overlay (only for regular videos) */}
+        {!isYouTubeVideo && !isPlaying && !isObscured && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] transition-all z-20">
-             <motion.button 
+             <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 className="w-20 h-20 bg-brand-blue rounded-full flex items-center justify-center text-white shadow-lg shadow-blue-500/40"
@@ -224,7 +258,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ poster, title, autoPla
         )}
       </div>
 
-      {/* Controls Overlay */}
+      {/* Controls Overlay (only for regular videos, YouTube has its own controls) */}
+      {!isYouTubeVideo && (
       <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-4 pt-12 transition-opacity duration-300 z-20 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
         {/* Progress Bar */}
         <div 
@@ -290,6 +325,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ poster, title, autoPla
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };
