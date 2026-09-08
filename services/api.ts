@@ -327,6 +327,61 @@ export const authAPI = {
       const firstName = userData.firstName?.trim() || 'Super';
       const lastName = userData.lastName?.trim() || 'Admin';
 
+      // 1. Try dev/backend endpoint first (which uses service_role key and bypasses public MX domain checks)
+      let backendUser: any = null;
+      try {
+        const resp = await fetch('/api/admin/setup-super-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userData.email,
+            password: userData.password,
+            firstName,
+            lastName,
+          }),
+        });
+        if (resp.ok) {
+          const resData = await resp.json();
+          backendUser = resData.user;
+        } else {
+          const errData = await resp.json().catch(() => ({}));
+          if (errData.error && errData.error.includes('existe déjà')) {
+            throw new Error(errData.error);
+          }
+        }
+      } catch (e: any) {
+        if (e.message && e.message.includes('existe déjà')) throw e;
+        console.warn('Backend setup-super-admin notice:', e);
+      }
+
+      if (backendUser) {
+        // Authenticate the session in the client
+        const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
+          email: userData.email,
+          password: userData.password,
+        });
+
+        if (loginErr) {
+          console.warn('Post-creation login notice:', loginErr.message);
+        }
+
+        return {
+          success: true,
+          message: 'Super Admin initial créé avec succès !',
+          user: {
+            id: loginData?.user?.id || backendUser.id,
+            email: userData.email,
+            firstName,
+            lastName,
+            fullName: `${firstName} ${lastName}`.trim(),
+            role: 'super_admin',
+            preferredLanguage: 'fr',
+            avatar: null,
+          },
+        };
+      }
+
+      // 2. Fallback to standard client signup
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -339,7 +394,13 @@ export const authAPI = {
         },
       });
 
-      if (authErr) throw new Error(authErr.message);
+      if (authErr) {
+        let msg = authErr.message;
+        if (msg.toLowerCase().includes('invalid') && msg.toLowerCase().includes('email')) {
+          msg = `L'adresse "${userData.email}" a été rejetée par la vérification publique Supabase (vérification des serveurs de messagerie MX du domaine). Vous pouvez exécuter "npm run setup:super-admin" dans le terminal ou désactiver la vérification MX dans Supabase Auth.`;
+        }
+        throw new Error(msg);
+      }
       if (!authData.user) throw new Error('Création du compte Super Admin échouée.');
 
       // Upsert profile in public.users

@@ -200,7 +200,17 @@ RETURNS trigger AS $$
 DECLARE
   v_caller_role VARCHAR(50);
 BEGIN
-  -- If role is changing
+  -- 1. Allow service_role, postgres superuser, or internal system processes
+  IF current_user = 'postgres' OR current_user = 'service_role' OR auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  -- 2. If no super_admin exists yet on the platform, allow initial elevation
+  IF NEW.role = 'super_admin' AND NOT EXISTS (SELECT 1 FROM public.users WHERE role = 'super_admin') THEN
+    RETURN NEW;
+  END IF;
+
+  -- 3. If role is changing
   IF OLD.role IS DISTINCT FROM NEW.role THEN
     -- Fetch caller role if authenticated
     SELECT role INTO v_caller_role FROM public.users WHERE id = auth.uid();
@@ -210,9 +220,9 @@ BEGIN
       RAISE EXCEPTION 'Accès Refusé : Seul un Super Admin peut modifier le compte d''un Super Admin.';
     END IF;
 
-    -- If elevating to super_admin, verify caller is super_admin OR no super_admin exists yet
+    -- If elevating to super_admin, verify caller is super_admin
     IF NEW.role = 'super_admin' THEN
-      IF (v_caller_role IS NULL OR v_caller_role <> 'super_admin') AND EXISTS (SELECT 1 FROM public.users WHERE role = 'super_admin') THEN
+      IF v_caller_role IS NULL OR v_caller_role <> 'super_admin' THEN
         RAISE EXCEPTION 'Accès Refusé : Seul un Super Admin peut promouvoir un autre Super Admin.';
       END IF;
     END IF;
