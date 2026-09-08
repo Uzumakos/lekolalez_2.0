@@ -27,7 +27,7 @@ import { BrandLogo } from './components/BrandLogo';
 import { CourseEditor } from './components/CourseEditor';
 import { AdminManagement } from './components/AdminManagement';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
-import { generateCourseContent, normalizeModule } from './utils/courseUtils';
+import { generateCourseContent, normalizeModule, sortCourses } from './utils/courseUtils';
 import { coursesAPI, siteContentAPI, getStoredUser, clearAuthData, authAPI, monitoringAPI, enrollmentsAPI } from './services/api';
 import supabase from './services/supabaseClient';
 
@@ -412,8 +412,8 @@ export default function App() {
             moduleList: (Array.isArray(c.modules) ? c.modules : (Array.isArray(c.moduleList) ? c.moduleList : [])).map((m: any, idx: number) => normalizeModule(m, idx))
           }));
 
-          // Use strictly database courses
-          setCourses(dbCourses);
+          // Use strictly database courses sorted in curriculum sequence
+          setCourses(sortCourses(dbCourses));
         } else {
           // No mock fallback - strictly reflect database
           setCourses([]);
@@ -577,11 +577,13 @@ export default function App() {
     setCourses(prev => {
       const matchId = originalId || updatedCourse.id;
       const exists = prev.find(c => c.id === matchId || c.id === updatedCourse.id);
+      let nextList: Course[];
       if (exists) {
-        return prev.map(c => (c.id === matchId || c.id === updatedCourse.id) ? updatedCourse : c);
+        nextList = prev.map(c => (c.id === matchId || c.id === updatedCourse.id) ? updatedCourse : c);
       } else {
-        return [...prev, updatedCourse];
+        nextList = [...prev, updatedCourse];
       }
+      return sortCourses(nextList);
     });
   };
 

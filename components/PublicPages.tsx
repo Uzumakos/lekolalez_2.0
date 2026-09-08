@@ -5,6 +5,7 @@ import { SiteContent, Course, Language, StaffMember } from '../types';
 import { Users, Award, BookOpen, Check, Star, Globe, MapPin, Briefcase } from 'lucide-react';
 import { CourseCard } from './CourseCard';
 import { useLanguage } from '../contexts/LanguageContext';
+import { sortCourses } from '../utils/courseUtils';
 
 // --- Default Staff Members ---
 export const DEFAULT_STAFF: StaffMember[] = [
@@ -531,6 +532,7 @@ export const PricingPage: React.FC<{ content: SiteContent['pricing'], onOpenAuth
 export const PublicCoursesPage: React.FC<{ courses: Course[], onOpenAuth: () => void }> = ({ courses, onOpenAuth }) => {
   const { language } = useLanguage();
   const i18n = PUBLIC_COURSES_I18N[language] || PUBLIC_COURSES_I18N[Language.FRENCH];
+  const sortedCourses = React.useMemo(() => sortCourses(courses), [courses]);
 
   return (
     <div className="pt-24 pb-20 bg-gray-50 min-h-screen">
@@ -541,8 +543,8 @@ export const PublicCoursesPage: React.FC<{ courses: Course[], onOpenAuth: () => 
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {courses.length > 0 ? (
-            courses.map(course => (
+          {sortedCourses.length > 0 ? (
+            sortedCourses.map(course => (
               <div key={course.id} onClick={onOpenAuth} className="cursor-pointer">
                 <CourseCard course={course} />
               </div>

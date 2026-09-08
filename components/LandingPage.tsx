@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Course, Language } from '../types';
 import { CourseCard } from './CourseCard';
 import { useLanguage } from '../contexts/LanguageContext';
+import { sortCourses } from '../utils/courseUtils';
 
 const WHY_US_FEATURES: Record<Language, { title: string; desc: string }[]> = {
     [Language.FRENCH]: [
@@ -33,6 +34,10 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpenAuth }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const { t, language } = useLanguage();
+
+    const sortedCourses = useMemo(() => {
+        return sortCourses(featuredCourses);
+    }, [featuredCourses]);
 
     const HERO_SLIDES = useMemo(() => {
         const slidesText = {
@@ -216,8 +221,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {featuredCourses.length > 0 ? (
-                            featuredCourses.slice(0, 4).map(course => (
+                        {sortedCourses.length > 0 ? (
+                            sortedCourses.slice(0, 4).map(course => (
                                 <div key={course.id} onClick={onOpenAuth} className="cursor-pointer h-full">
                                     <CourseCard course={course} />
                                 </div>

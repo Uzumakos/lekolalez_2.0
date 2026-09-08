@@ -260,6 +260,19 @@ export interface AuditLog {
   ipAddress?: string | null;
   userAgent?: string | null;
   createdAt: string;
+
+  // DB column aliases (snake_case)
+  user_id?: string | null;
+  user_email?: string;
+  user_name?: string | null;
+  user_role?: UserRole | string;
+  action_category?: AuditLogCategory | string;
+  target_type?: string | null;
+  target_id?: string | null;
+  target_label?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at?: string;
 }
 
 export interface AuditLogFilters {

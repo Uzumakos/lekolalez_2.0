@@ -1,4 +1,5 @@
 import supabase, { supabaseAdmin } from './supabaseClient';
+import { sortCourses } from '../utils/courseUtils';
 
 // ─── System Audit & Activity Logs API ───────────────────────────────────────────
 
@@ -33,8 +34,19 @@ export const auditLogsAPI = {
           userEmail = profile.email || userEmail;
           userName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || userEmail;
           userRole = profile.role || userRole;
+        } else if (authUser.user_metadata) {
+          const metaName = `${authUser.user_metadata.first_name || ''} ${authUser.user_metadata.last_name || ''}`.trim();
+          userName = metaName || authUser.user_metadata.full_name || authUser.email || 'Utilisateur';
+          userRole = authUser.user_metadata.role || 'student';
         }
       }
+
+      const payloadDetails = {
+        email: userEmail,
+        name: userName,
+        role: userRole,
+        ...(event.details || {}),
+      };
 
       // 1. Try secure RPC function
       try {
@@ -44,7 +56,7 @@ export const auditLogsAPI = {
           p_target_type: event.targetType || null,
           p_target_id: event.targetId ? String(event.targetId) : null,
           p_target_label: event.targetLabel || null,
-          p_details: event.details || {},
+          p_details: payloadDetails,
         });
         if (!rpcError && rpcData) return rpcData;
       } catch {
@@ -64,7 +76,7 @@ export const auditLogsAPI = {
           target_type: event.targetType || null,
           target_id: event.targetId ? String(event.targetId) : null,
           target_label: event.targetLabel || null,
-          details: event.details || {},
+          details: payloadDetails,
           created_at: new Date().toISOString(),
         })
         .select()
@@ -140,22 +152,49 @@ export const auditLogsAPI = {
       return { logs: [], pagination: { page: 1, limit, total: 0, pages: 0 } };
     }
 
-    const logs = (data || []).map((l: any) => ({
-      id: l.id,
-      userId: l.user_id,
-      userEmail: l.user_email,
-      userName: l.user_name,
-      userRole: l.user_role,
-      action: l.action,
-      actionCategory: l.action_category,
-      targetType: l.target_type,
-      targetId: l.target_id,
-      targetLabel: l.target_label,
-      details: l.details,
-      ipAddress: l.ip_address,
-      userAgent: l.user_agent,
-      createdAt: l.created_at,
-    }));
+    const logs = (data || []).map((l: any) => {
+      const createdAt = l.created_at || l.createdAt || new Date().toISOString();
+      const userEmail = l.user_email || l.userEmail || (l.details?.email ? String(l.details.email) : '');
+      const rawName = l.user_name || l.userName || (l.details?.name ? String(l.details.name) : '');
+      const userName = (rawName && rawName !== 'Utilisateur') ? rawName : (userEmail ? userEmail.split('@')[0] : 'Utilisateur');
+      const userRole = l.user_role || l.userRole || (l.details?.role ? String(l.details.role) : 'student');
+      const ipAddress = l.ip_address || l.ipAddress || '127.0.0.1';
+      const userAgent = l.user_agent || l.userAgent || 'Client Web';
+      const targetLabel = l.target_label || l.targetLabel;
+      const targetType = l.target_type || l.targetType;
+      const targetId = l.target_id || l.targetId;
+      const actionCategory = l.action_category || l.actionCategory;
+
+      return {
+        id: l.id,
+        // CamelCase
+        userId: l.user_id || l.userId,
+        userEmail,
+        userName,
+        userRole,
+        action: l.action,
+        actionCategory,
+        targetType,
+        targetId,
+        targetLabel,
+        details: l.details,
+        ipAddress,
+        userAgent,
+        createdAt,
+        // Snake_case aliases
+        user_id: l.user_id || l.userId,
+        user_email: userEmail,
+        user_name: userName,
+        user_role: userRole,
+        action_category: actionCategory,
+        target_type: targetType,
+        target_id: targetId,
+        target_label: targetLabel,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        created_at: createdAt,
+      };
+    });
 
     return {
       logs,
@@ -717,13 +756,19 @@ export const authAPI = {
         };
 
     // Log login event to audit logs
+    const loginUserFullName = user.fullName?.trim() || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
     auditLogsAPI.log({
       action: 'user_login',
       actionCategory: 'auth',
       targetType: 'user',
       targetId: user.id,
       targetLabel: user.email,
-      details: { role: user.role, login_at: new Date().toISOString() },
+      details: {
+        role: user.role,
+        email: user.email,
+        name: loginUserFullName,
+        login_at: new Date().toISOString()
+      },
     }).catch(() => {});
 
     return { user };
@@ -954,7 +999,7 @@ export const coursesAPI = {
       if (params?.level) q = q.eq('level', params.level);
       if (params?.search) q = q.ilike('title', `%${params.search}%`);
 
-      q = q.order('created_at', { ascending: false });
+      q = q.order('created_at', { ascending: true });
       q = q.range(offset, offset + limit - 1);
       return q;
     };
@@ -976,7 +1021,7 @@ export const coursesAPI = {
     const courses = (data || []).map(mapCourseRow).filter(Boolean);
 
     return {
-      courses,
+      courses: sortCourses(courses),
       pagination: {
         page,
         limit,
@@ -1009,7 +1054,7 @@ export const coursesAPI = {
         q = q.eq('instructor_id', authUser.id);
       }
 
-      q = q.order('created_at', { ascending: false });
+      q = q.order('created_at', { ascending: true });
       return q;
     };
 
@@ -1024,7 +1069,7 @@ export const coursesAPI = {
 
     if (error) throw new Error(error.message);
 
-    return { courses: (data || []).map(mapCourseRow).filter(Boolean) };
+    return { courses: sortCourses((data || []).map(mapCourseRow).filter(Boolean)) };
   },
 
   getById: async (id: string) => {

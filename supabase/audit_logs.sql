@@ -112,9 +112,9 @@ BEGIN
   )
   VALUES (
     v_user_id,
-    COALESCE(v_user_email, 'unknown'),
-    COALESCE(v_user_name, 'Utilisateur'),
-    COALESCE(v_user_role, 'student'),
+    COALESCE(v_user_email, p_details->>'email', 'unknown'),
+    COALESCE(NULLIF(v_user_name, ''), p_details->>'name', p_details->>'email', 'Utilisateur'),
+    COALESCE(v_user_role, p_details->>'role', 'student'),
     p_action,
     p_action_category,
     p_target_type,

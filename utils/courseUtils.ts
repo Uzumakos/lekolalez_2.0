@@ -110,3 +110,90 @@ export const getCourseProgress = (courseId: string, moduleCount: number, complet
     percentage: Math.round((count / totalLessons) * 100),
   };
 };
+
+/**
+ * Calculates a sorting rank for a course based on its title and grade level.
+ * Guarantees standard Haitian curriculum order:
+ * 1ère AF (rank 10) -> 2ème AF (rank 20) -> 3ème AF (rank 30) ... -> 9ème AF (rank 90)
+ * Followed by Secondary cycle: NS1 (110) -> NS2 (120) -> NS3 (130) -> NS4 (140)
+ * Other courses receive a base rank of 1000 and are sorted chronologically.
+ */
+export const getCourseSortRank = (course: { title?: string; level?: string }): number => {
+  const title = (course.title || '').trim().toLowerCase();
+  const level = (course.level || '').trim().toLowerCase();
+
+  // Pattern 1: numbers followed by optional suffix and 'af' / 'année fondamentale' (e.g. "1ère af", "2ème af", "1 af", "2e annee fondamentale")
+  const afRegex = /(?:^|\b)(\d+)\s*(?:[eèé]re?|[eèé]me?|i[eèé]me?|e|er|nd|eme|ème)?\s*(?:af\b|ann[eé]e\s*fondamentale|\baf\b)/i;
+  // Pattern 2: "af 1", "af 2"
+  const afPrefixRegex = /\baf\s*(\d+)\b/i;
+  // Pattern 3: Starts with a number + ordinal (e.g. "1ère", "2ème", "1er", "2nd")
+  const startOrdinalRegex = /^(\d+)\s*(?:[eèé]re?|[eèé]me?|i[eèé]me?|e|er|nd)\b/i;
+
+  const match = title.match(afRegex) || level.match(afRegex) || title.match(afPrefixRegex) || title.match(startOrdinalRegex);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (!isNaN(num) && num >= 1 && num <= 20) {
+      return num * 10;
+    }
+  }
+
+  // Word-based fundamental levels:
+  if (/premi[eè]re\s+ann[eé]e\s+fondamentale/i.test(title)) return 10;
+  if (/deuxi[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 20;
+  if (/troisi[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 30;
+  if (/quatri[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 40;
+  if (/cinqui[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 50;
+  if (/sixi[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 60;
+  if (/septi[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 70;
+  if (/huiti[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 80;
+  if (/neuvi[eè]me\s+ann[eé]e\s+fondamentale/i.test(title)) return 90;
+
+  // Secondary cycle: NS1 to NS4 / Seconde to Philo
+  const nsMatch = title.match(/\bns\s*(\d+)\b/i) || title.match(/nouveau\s*secondaire\s*(\d+)\b/i);
+  if (nsMatch) {
+    const num = parseInt(nsMatch[1], 10);
+    if (!isNaN(num)) return 100 + num * 10;
+  }
+  if (/\bseconde\b/i.test(title)) return 110;
+  if (/\brh[eé]to\b/i.test(title)) return 130;
+  if (/\bphilo\b/i.test(title)) return 140;
+
+  // Fallback rank for custom or non-academic courses
+  return 1000;
+};
+
+/**
+ * Sorts courses in logical academic sequence:
+ * 1. 1ère AF first, then 2ème AF, 3ème AF, 4ème AF...
+ * 2. Secondary classes (NS1, NS2, etc.)
+ * 3. Other courses follow chronologically (oldest first) so newly added courses appear in sequence
+ * 4. Fallback to natural alphabetical sort
+ */
+export const sortCourses = <T extends { title?: string; level?: string; createdAt?: string; created_at?: string }>(courses: T[]): T[] => {
+  if (!Array.isArray(courses)) return [];
+
+  return [...courses].sort((a, b) => {
+    const rankA = getCourseSortRank(a);
+    const rankB = getCourseSortRank(b);
+
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+
+    // If same rank, maintain chronological creation order (oldest first, so newly added courses follow previous ones)
+    const dateA = a.createdAt || (a as any).created_at;
+    const dateB = b.createdAt || (b as any).created_at;
+    if (dateA && dateB) {
+      const timeA = new Date(dateA).getTime();
+      const timeB = new Date(dateB).getTime();
+      if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+        return timeA - timeB;
+      }
+    }
+
+    // Fallback: natural locale compare (handles numbers properly, e.g. "Part 1" before "Part 2")
+    const titleA = a.title || '';
+    const titleB = b.title || '';
+    return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+};

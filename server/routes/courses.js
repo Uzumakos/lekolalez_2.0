@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
 
     const courses = await Course.find(query)
       .populate('instructor', 'firstName lastName avatar title fullName')
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: 1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit));
 
@@ -77,7 +77,7 @@ router.get('/all', protect, instructor, async (req, res) => {
 
     const courses = await Course.find(query)
       .populate('instructor', 'firstName lastName avatar')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: 1 });
 
     res.json({ courses });
   } catch (error) {

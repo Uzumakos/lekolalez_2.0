@@ -1787,7 +1787,18 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
                     {auditLogs.map((log) => {
-                      const logDate = new Date(log.created_at);
+                      const logDateStr = log.created_at || log.createdAt;
+                      const logDate = logDateStr ? new Date(logDateStr) : new Date();
+                      const isValidDate = !isNaN(logDate.getTime());
+                      const displayName = log.user_name || log.userName || (log.user_email || log.userEmail ? (log.user_email || log.userEmail).split('@')[0] : 'Utilisateur');
+                      const displayEmail = log.user_email || log.userEmail || '';
+                      const displayRole = log.user_role || log.userRole || 'student';
+                      const initialChar = (displayName || displayEmail || '?').charAt(0).toUpperCase();
+                      const displayIp = log.ip_address || log.ipAddress || '127.0.0.1';
+                      const displayTarget = log.target_label || log.targetLabel || log.target_id || log.targetId;
+                      const displayTargetType = log.target_type || log.targetType;
+                      const displayCategory = log.action_category || log.actionCategory;
+
                       return (
                         <tr key={log.id} className="hover:bg-purple-50/20 transition-colors">
                           <td className="p-4 whitespace-nowrap">
@@ -1795,10 +1806,14 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({
                               <Clock size={14} className="text-gray-400" />
                               <div>
                                 <div className="font-semibold text-gray-900">
-                                  {logDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  {isValidDate
+                                    ? logDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+                                    : 'Date inconnue'}
                                 </div>
                                 <div className="text-[11px] text-gray-500 font-mono">
-                                  {logDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                  {isValidDate
+                                    ? logDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                    : '--:--'}
                                 </div>
                               </div>
                             </div>
@@ -1806,36 +1821,38 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({
                           <td className="p-4">
                             <div className="flex items-center gap-2.5">
                               <div className="w-7 h-7 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-xs text-gray-700 shrink-0">
-                                {(log.user_name || log.user_email || '?').charAt(0).toUpperCase()}
+                                {initialChar}
                               </div>
                               <div>
                                 <div className="font-bold text-gray-900 flex items-center gap-1.5">
-                                  <span>{log.user_name || 'Utilisateur'}</span>
+                                  <span>{displayName}</span>
                                   <span className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase ${
-                                    log.user_role === 'super_admin'
+                                    displayRole === 'super_admin'
                                       ? 'bg-purple-100 text-purple-800'
-                                      : log.user_role === 'admin'
+                                      : displayRole === 'admin'
                                       ? 'bg-blue-100 text-blue-800'
-                                      : log.user_role === 'instructor'
+                                      : displayRole === 'instructor'
                                       ? 'bg-violet-100 text-violet-800'
                                       : 'bg-emerald-100 text-emerald-800'
                                   }`}>
-                                    {log.user_role === 'super_admin' ? 'Super Admin' : log.user_role}
+                                    {displayRole === 'super_admin' ? 'Super Admin' : displayRole}
                                   </span>
                                 </div>
-                                <div className="text-[11px] text-gray-500">{log.user_email}</div>
+                                {displayEmail && (
+                                  <div className="text-[11px] text-gray-500">{displayEmail}</div>
+                                )}
                               </div>
                             </div>
                           </td>
                           <td className="p-4">
-                            {getActionBadge(log.action, log.action_category)}
+                            {getActionBadge(log.action, displayCategory)}
                           </td>
                           <td className="p-4">
-                            {log.target_label || log.target_type ? (
+                            {displayTarget || displayTargetType ? (
                               <div>
-                                <span className="font-semibold text-gray-800">{log.target_label || log.target_id || '-'}</span>
-                                {log.target_type && (
-                                  <div className="text-[10px] text-gray-400 capitalize">{log.target_type}</div>
+                                <span className="font-semibold text-gray-800">{displayTarget || '-'}</span>
+                                {displayTargetType && (
+                                  <div className="text-[10px] text-gray-400 capitalize">{displayTargetType}</div>
                                 )}
                               </div>
                             ) : (
@@ -1843,7 +1860,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({
                             )}
                           </td>
                           <td className="p-4 whitespace-nowrap text-gray-500 font-mono text-[11px]">
-                            {log.ip_address || '127.0.0.1'}
+                            {displayIp}
                           </td>
                           <td className="p-4 text-right">
                             <button
@@ -2097,67 +2114,87 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({
             </div>
 
             {/* Quick Grid Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-              <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
-                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date & Heure exacte</div>
-                <div className="text-xs font-semibold text-gray-800">
-                  {new Date(selectedLogForModal.created_at).toLocaleString('fr-FR', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  })}
-                </div>
-              </div>
+            {(() => {
+              const modalDateStr = selectedLogForModal.created_at || selectedLogForModal.createdAt;
+              const modalDate = modalDateStr ? new Date(modalDateStr) : new Date();
+              const isModalDateValid = !isNaN(modalDate.getTime());
+              const modalName = selectedLogForModal.user_name || selectedLogForModal.userName || (selectedLogForModal.user_email || selectedLogForModal.userEmail ? (selectedLogForModal.user_email || selectedLogForModal.userEmail).split('@')[0] : 'Utilisateur');
+              const modalEmail = selectedLogForModal.user_email || selectedLogForModal.userEmail || '';
+              const modalRole = selectedLogForModal.user_role || selectedLogForModal.userRole || 'student';
+              const modalCategory = selectedLogForModal.action_category || selectedLogForModal.actionCategory;
+              const modalTarget = selectedLogForModal.target_label || selectedLogForModal.targetLabel || selectedLogForModal.target_id || selectedLogForModal.targetId || 'Aucune';
+              const modalTargetType = selectedLogForModal.target_type || selectedLogForModal.targetType;
+              const modalIp = selectedLogForModal.ip_address || selectedLogForModal.ipAddress || '127.0.0.1';
+              const modalAgent = selectedLogForModal.user_agent || selectedLogForModal.userAgent || 'Client Web';
 
-              <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
-                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Auteur de l'action</div>
-                <div className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                  <span>{selectedLogForModal.user_name || 'Utilisateur'}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-purple-100 text-purple-800">
-                    {selectedLogForModal.user_role}
-                  </span>
-                </div>
-                <div className="text-[11px] text-gray-500">{selectedLogForModal.user_email}</div>
-              </div>
+              return (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                    <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date & Heure exacte</div>
+                      <div className="text-xs font-semibold text-gray-800">
+                        {isModalDateValid
+                          ? modalDate.toLocaleString('fr-FR', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit'
+                            })
+                          : 'Date non renseignée'}
+                      </div>
+                    </div>
 
-              <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
-                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Action & Catégorie</div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {getActionBadge(selectedLogForModal.action, selectedLogForModal.action_category)}
-                  <span className="text-xs text-gray-500 capitalize">({selectedLogForModal.action_category})</span>
-                </div>
-              </div>
+                    <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Auteur de l'action</div>
+                      <div className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        <span>{modalName}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-purple-100 text-purple-800">
+                          {modalRole}
+                        </span>
+                      </div>
+                      {modalEmail && <div className="text-[11px] text-gray-500">{modalEmail}</div>}
+                    </div>
 
-              <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
-                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cible concernée</div>
-                <div className="text-xs font-semibold text-gray-800">{selectedLogForModal.target_label || selectedLogForModal.target_id || 'Aucune'}</div>
-                {selectedLogForModal.target_type && (
-                  <div className="text-[10px] text-gray-400 capitalize">Type: {selectedLogForModal.target_type}</div>
-                )}
-              </div>
-            </div>
+                    <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Action & Catégorie</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {getActionBadge(selectedLogForModal.action, modalCategory)}
+                        {modalCategory && <span className="text-xs text-gray-500 capitalize">({modalCategory})</span>}
+                      </div>
+                    </div>
 
-            {/* Technical Context */}
-            <div className="mb-5 p-3.5 bg-slate-900 rounded-2xl text-slate-200">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Contexte Réseau & Système</span>
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">Traçabilité Active</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
-                <div>
-                  <span className="text-slate-500">Adresse IP: </span>
-                  <span className="text-slate-200 font-bold">{selectedLogForModal.ip_address || 'Non renseigné (127.0.0.1)'}</span>
-                </div>
-                <div className="truncate">
-                  <span className="text-slate-500">Agent: </span>
-                  <span className="text-slate-300" title={selectedLogForModal.user_agent}>{selectedLogForModal.user_agent || 'Client Web'}</span>
-                </div>
-              </div>
-            </div>
+                    <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cible concernée</div>
+                      <div className="text-xs font-semibold text-gray-800">{modalTarget}</div>
+                      {modalTargetType && (
+                        <div className="text-[10px] text-gray-400 capitalize">Type: {modalTargetType}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Technical Context */}
+                  <div className="mb-5 p-3.5 bg-slate-900 rounded-2xl text-slate-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Contexte Réseau & Système</span>
+                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">Traçabilité Active</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                      <div>
+                        <span className="text-slate-500">Adresse IP: </span>
+                        <span className="text-slate-200 font-bold">{modalIp}</span>
+                      </div>
+                      <div className="truncate">
+                        <span className="text-slate-500">Agent: </span>
+                        <span className="text-slate-300" title={modalAgent}>{modalAgent}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Payload JSON */}
             {selectedLogForModal.details && Object.keys(selectedLogForModal.details).length > 0 && (
