@@ -272,33 +272,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-[200] overflow-y-auto">
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-3xl shadow-2xl z-[70] overflow-hidden max-h-[92vh] flex flex-col"
-          >
-            <div className="relative overflow-y-auto flex-1">
-              {/* Decorative Header Background */}
-              <div className="absolute top-0 left-0 w-full h-28 bg-gradient-to-br from-brand-blue to-blue-600"></div>
 
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 text-white rounded-full transition-colors backdrop-blur-md z-10"
-              >
-                <X size={20} />
-              </button>
+          {/* Centering Wrapper */}
+          <div className="min-h-full flex items-center justify-center p-3 sm:p-4 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col text-left my-auto"
+            >
+              <div className="relative overflow-y-auto flex-1">
+                {/* Decorative Header Background */}
+                <div className="absolute top-0 left-0 w-full h-24 sm:h-28 bg-gradient-to-br from-brand-blue to-blue-600"></div>
 
-              <div className="relative pt-8 px-6 pb-6">
-                <div className="bg-white rounded-2xl p-6 shadow-xl mb-4 border border-gray-100">
+                <button
+                  onClick={onClose}
+                  className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 bg-white/20 hover:bg-white/30 text-white rounded-full transition-colors backdrop-blur-md z-10"
+                >
+                  <X size={20} />
+                </button>
+
+                <div className="relative pt-6 sm:pt-8 px-4 sm:px-6 pb-6">
+                  <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-xl mb-4 border border-gray-100">
                   <div className="text-center mb-5">
                     <h2 className="text-2xl font-bold text-gray-900">
                       {mode === 'forgot'
@@ -636,8 +641,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
               </div>
             </div>
           </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
+        </div>
+      </div>
+    )}
+  </AnimatePresence>
+);
 };

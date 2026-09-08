@@ -50,28 +50,31 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({ isOpen, onClos
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-[200] overflow-y-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={reset}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-2xl z-50 overflow-hidden"
-          >
-            {step !== 'success' && (
+
+          <div className="min-h-full flex items-center justify-center p-3 sm:p-4 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden text-left my-auto"
+            >
+              {step !== 'success' && (
                 <div className="flex justify-between items-center p-4 border-b border-gray-100">
-                <h3 className="font-bold text-lg text-gray-800">Complete Enrollment</h3>
-                <button onClick={reset} className="text-gray-400 hover:text-gray-600">
+                  <h3 className="font-bold text-lg text-gray-800">Complete Enrollment</h3>
+                  <button onClick={reset} className="text-gray-400 hover:text-gray-600">
                     <X size={20} />
-                </button>
+                  </button>
                 </div>
-            )}
+              )}
 
             <div className="p-6">
               {step === 'confirm' && (
@@ -165,8 +168,9 @@ export const EnrollmentModal: React.FC<EnrollmentModalProps> = ({ isOpen, onClos
               )}
             </div>
           </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
+        </div>
+      </div>
+    )}
+  </AnimatePresence>
+);
 };

@@ -39,15 +39,16 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
   ];
 
   const isHome = location.pathname === '/';
-  const navTextColor = isScrolled || !isHome ? 'text-gray-800' : 'text-white';
-  const switcherVariant = isScrolled || !isHome ? 'light' : 'dark';
-  const logoVariant = isScrolled || !isHome ? 'dark' : 'light';
+  const isSolidNav = isScrolled || !isHome || isMobileMenuOpen;
+  const navTextColor = isSolidNav ? 'text-gray-800' : 'text-white';
+  const switcherVariant = isSolidNav ? 'light' : 'dark';
+  const logoVariant = isSolidNav ? 'dark' : 'light';
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
       {/* Navbar */}
-      <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled || !isHome ? 'bg-white/95 backdrop-blur-md shadow-sm py-3 border-b border-gray-100' : 'bg-transparent py-5'}`}>
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+      <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isSolidNav ? 'bg-white/95 backdrop-blur-md shadow-sm py-2.5 sm:py-3 border-b border-gray-100' : 'bg-transparent py-4 sm:py-5'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
           <Link to="/">
             <BrandLogo variant={logoVariant} />
           </Link>
@@ -89,14 +90,15 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-4">
-            <div className="scale-90">
+          {/* Mobile Menu Button & Switcher */}
+          <div className="md:hidden flex items-center gap-1.5 sm:gap-3">
+            <div className="scale-90 origin-right">
                 <LanguageSwitcher variant={switcherVariant} />
             </div>
             <button 
-                className="p-2"
+                className="p-2 -mr-1 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label="Menu"
             >
                 {isMobileMenuOpen ? <X size={24} className={navTextColor} /> : <Menu size={24} className={navTextColor} />}
             </button>
