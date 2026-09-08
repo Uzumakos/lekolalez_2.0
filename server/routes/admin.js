@@ -65,7 +65,7 @@ router.post('/invite', protect, admin, async (req, res) => {
 
     // In a real app, you would send an email here with the invite link
     // For now, we'll return the token (in production, send via email only)
-    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/#/accept-invite/${inviteToken}`;
+    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/accept-invite/${inviteToken}`;
 
     res.status(201).json({
       message: 'Admin invitation sent successfully',

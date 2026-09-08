@@ -180,7 +180,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ poster, title, videoUr
             transition={{ duration: 10, repeat: Infinity }}
             className="absolute top-1/2 left-1/3 text-white/10 text-4xl font-black uppercase tracking-widest pointer-events-none"
           >
-            Lekol Alèz
+            Lekòl Alèz
           </motion.div>
         </div>
       )}

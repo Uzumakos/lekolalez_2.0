@@ -1,5 +1,5 @@
 {
-  "name": "Lekòl Alèz LMS",
-  "description": "A modern Learning Management System with an AI Assistant fluent in English, French, and Haitian Creole. Features an admin dashboard and student course catalog.",
+  "name": "Lekòl Alèz",
+  "description": "Lekòl Alèz est une plateforme haïtienne d'apprentissage et d'accompagnement scolaire numérique (EdTech), conçue pour permettre aux élèves du premier et deuxième cycles fondamentaux (de la 1re à la 6e année fondamentale) de réviser, consolider et réussir leur parcours scolaire, aussi bien à l'école qu'à la maison.",
   "requestFramePermissions": []
 }

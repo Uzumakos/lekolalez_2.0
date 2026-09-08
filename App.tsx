@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { LayoutDashboard, BookOpen, Settings, LogOut, Menu, Search, Plus, GraduationCap, Upload, X, Check, Loader2, FileVideo, Image as ImageIcon, AlertCircle, Layout as LayoutIcon, Shield } from 'lucide-react';
 import { DashboardStats } from './components/DashboardStats';
 import { StudentDashboard } from './components/StudentDashboard';
