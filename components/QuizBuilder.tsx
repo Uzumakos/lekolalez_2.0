@@ -135,7 +135,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
             </button>
             <div>
                 <h2 className="text-xl font-bold text-gray-800">{t('admin.quizBuilder')}</h2>
-                <p className="text-xs text-gray-500">Create engaging assessments for your students</p>
+                <p className="text-xs text-gray-500">{t('quiz.builderSubtitle')}</p>
             </div>
         </div>
         <div className="flex items-center gap-3">
@@ -144,7 +144,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                 className="flex items-center gap-2 px-6 py-2 bg-brand-blue text-white font-bold rounded-xl hover:bg-sky-600 transition-colors shadow-lg shadow-blue-500/20"
             >
                 <Save size={18} />
-                Save Quiz
+                {t('quiz.saveQuiz')}
             </button>
         </div>
       </div>
@@ -157,12 +157,12 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                     type="text" 
                     value={quizDetails.title}
                     onChange={(e) => setQuizDetails({...quizDetails, title: e.target.value})}
-                    placeholder="Quiz Title"
+                    placeholder={t('quiz.quizTitle')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-brand-blue outline-none font-bold text-gray-800"
                  />
                  <div className="mt-2 flex gap-2">
                      <div className="flex-1">
-                        <label className="text-[10px] text-gray-500 uppercase font-bold">Passing %</label>
+                        <label className="text-[10px] text-gray-500 uppercase font-bold">{t('quiz.passingScore')}</label>
                         <input 
                             type="number" 
                             value={quizDetails.passingScore}
@@ -171,7 +171,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                         />
                      </div>
                      <div className="flex-1">
-                        <label className="text-[10px] text-gray-500 uppercase font-bold">Time (min)</label>
+                        <label className="text-[10px] text-gray-500 uppercase font-bold">{t('quiz.timeLimit')}</label>
                         <input 
                             type="number" 
                             value={quizDetails.timeLimit || 0}
@@ -198,17 +198,18 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                     >
                         <div className="flex justify-between items-start mb-1">
                             <span className={`text-xs font-bold uppercase ${activeQuestionId === q.id ? 'text-brand-blue' : 'text-gray-500'}`}>
-                                Question {idx + 1}
+                                {t('quiz.question')} {idx + 1}
                             </span>
                             <button 
                                 onClick={(e) => removeQuestion(q.id, e)}
                                 className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title={t('quiz.deleteOptionTooltip')}
                             >
                                 <Trash2 size={14} />
                             </button>
                         </div>
                         <p className="text-sm text-gray-800 line-clamp-2 font-medium">
-                            {q.text || "New Question"}
+                            {q.text || t('quiz.newQuestion')}
                         </p>
                         <div className="mt-2 flex items-center gap-2">
                              <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 uppercase">{q.type}</span>
@@ -232,10 +233,10 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                  <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8 animate-in fade-in zoom-in duration-200 key={activeQuestionId}">
                      <div className="flex justify-between items-start mb-6">
                          <div>
-                             <h3 className="text-xl font-bold text-gray-800">Edit Question</h3>
+                             <h3 className="text-xl font-bold text-gray-800">{t('quiz.editQuestion')}</h3>
                          </div>
                          <div className="flex items-center gap-2">
-                             <span className="text-sm text-gray-500">Points:</span>
+                             <span className="text-sm text-gray-500">{t('quiz.points')}</span>
                              <input 
                                 type="number" 
                                 value={activeQuestion.points}
@@ -251,10 +252,10 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                              <label className="block text-sm font-medium text-gray-700 mb-2">{t('quiz.questionType')}</label>
                              <div className="grid grid-cols-4 gap-3">
                                  {[
-                                     { id: 'single', label: 'Single Choice' },
-                                     { id: 'multiple', label: 'Multiple Choice' },
-                                     { id: 'true-false', label: 'True / False' },
-                                     { id: 'text', label: 'Short Answer' },
+                                     { id: 'single', label: t('quiz.singleChoice') },
+                                     { id: 'multiple', label: t('quiz.multipleChoice') },
+                                     { id: 'true-false', label: t('quiz.trueFalse') },
+                                     { id: 'text', label: t('quiz.shortAnswer') },
                                  ].map(type => (
                                      <button
                                         key={type.id}
@@ -273,12 +274,12 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
 
                          {/* Question Text */}
                          <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-2">Question Text</label>
+                             <label className="block text-sm font-medium text-gray-700 mb-2">{t('quiz.questionText')}</label>
                              <textarea 
                                 value={activeQuestion.text}
                                 onChange={(e) => updateQuestion('text', e.target.value)}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none resize-none h-32"
-                                placeholder="What is the capital of Haiti?"
+                                placeholder={t('quiz.optionPlaceholder')}
                              ></textarea>
                          </div>
 
@@ -290,11 +291,11 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                                      <AnimatePresence>
                                          {activeQuestion.options.map((option, idx) => (
                                              <motion.div 
-                                                key={option.id}
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                className="flex items-center gap-3 group"
+                                                 key={option.id}
+                                                 initial={{ opacity: 0, y: 10 }}
+                                                 animate={{ opacity: 1, y: 0 }}
+                                                 exit={{ opacity: 0, y: -10 }}
+                                                 className="flex items-center gap-3 group"
                                              >
                                                  <div className="pt-2 cursor-grab text-gray-300 hover:text-gray-500">
                                                      <GripVertical size={20} />
@@ -308,7 +309,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                                                         ? 'bg-green-500 border-green-500 text-white' 
                                                         : 'border-gray-300 text-transparent hover:border-green-400'
                                                     }`}
-                                                    title={t('quiz.correctAnswer')}
+                                                    title={t('quiz.correctAnswerTooltip')}
                                                  >
                                                      <Check size={14} strokeWidth={3} />
                                                  </button>
@@ -322,12 +323,13 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                                                         ? 'border-green-500 bg-green-50' 
                                                         : 'border-gray-300 focus:border-brand-blue'
                                                     }`}
-                                                    placeholder={`Option ${idx + 1}`}
+                                                    placeholder={`${t('quiz.optionPlaceholder')} ${idx + 1}`}
                                                  />
 
                                                  <button 
                                                     onClick={() => removeOption(option.id)}
                                                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title={t('quiz.deleteOptionTooltip')}
                                                  >
                                                      <X size={18} />
                                                  </button>
@@ -339,20 +341,20 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
                                     onClick={addOption}
                                     className="mt-4 text-sm font-bold text-brand-blue hover:text-sky-600 flex items-center gap-1"
                                  >
-                                     <Plus size={16} /> Add Option
+                                     <Plus size={16} /> {t('quiz.addOption')}
                                  </button>
                              </div>
                          )}
                          
                          {/* Explanation */}
                          <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-2">Explanation (Optional)</label>
+                             <label className="block text-sm font-medium text-gray-700 mb-2">{t('quiz.explanation')}</label>
                              <input 
-                                type="text"
+                                type="text" 
                                 value={activeQuestion.explanation || ''}
                                 onChange={(e) => updateQuestion('explanation', e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-brand-blue outline-none"
-                                placeholder="Explain why the answer is correct..."
+                                placeholder={t('quiz.explanationPlaceholder')}
                              />
                          </div>
                      </div>
@@ -360,7 +362,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ initialData, onSave, o
              ) : (
                  <div className="h-full flex flex-col items-center justify-center text-gray-400">
                      <AlertCircle size={48} className="mb-4 text-gray-300" />
-                     <p className="text-lg">Select a question to edit or add a new one.</p>
+                     <p className="text-lg">{t('quiz.selectQuestionPrompt')}</p>
                  </div>
              )}
         </div>

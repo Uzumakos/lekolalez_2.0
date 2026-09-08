@@ -39,8 +39,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
           alt={course.title} 
           className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" 
         />
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-brand-blue uppercase tracking-wider">
-          {course.category}
+        <div className="absolute top-4 right-4 flex items-center gap-1.5">
+          {course.showLevel && course.level && (
+            <div className="bg-amber-100/95 backdrop-blur-sm px-2 py-1 rounded-md text-[11px] font-bold text-amber-800 uppercase tracking-wider shadow-2xs">
+              {course.level}
+            </div>
+          )}
+          <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-brand-blue uppercase tracking-wider">
+            {course.category}
+          </div>
         </div>
         {course.price === 0 && (
           <div className="absolute top-4 left-4 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-white uppercase tracking-wider">

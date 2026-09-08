@@ -38,7 +38,7 @@ export const LanguageSwitcher: React.FC<{ variant?: 'light' | 'dark' }> = ({ var
   const textColor = variant === 'light' ? 'text-gray-800' : 'text-white';
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-50" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/5 transition-colors ${textColor}`}
@@ -58,7 +58,7 @@ export const LanguageSwitcher: React.FC<{ variant?: 'light' | 'dark' }> = ({ var
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
+            className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[100]"
           >
             {Object.entries(FLAGS).map(([key, { src, label }]) => (
               <button

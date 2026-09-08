@@ -76,9 +76,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ userRole, currentUse
       });
 
       // Update stored user data
-      const token = localStorage.getItem('token');
-      if (token && response.user) {
-        setAuthData(token, response.user);
+      if (response.user) {
+        setAuthData('', response.user);
       }
 
       // Notify parent component

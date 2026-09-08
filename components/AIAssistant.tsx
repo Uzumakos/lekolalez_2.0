@@ -11,16 +11,16 @@ interface AIAssistantProps {
   completedLessons?: Record<string, string[]>;
 }
 
-export const AIAssistant: React.FC<AIAssistantProps> = ({ 
-  courses, 
-  enrolledCourseIds = [], 
-  completedLessons = {} 
+export const AIAssistant: React.FC<AIAssistantProps> = ({
+  courses,
+  enrolledCourseIds = [],
+  completedLessons = {}
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'model',
-      text: "Bonjou! 👋 I am your Lekol Alèz assistant. Mwen pale Kreyòl, Français, and English. How can I help you learn today?",
+      text: "Bonjou! 👋 I am your Lekòl Alèz assistant. Mwen pale Kreyòl, Français, and English. How can I help you learn today?",
       timestamp: new Date()
     }
   ]);
@@ -53,17 +53,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
     try {
       const result = await chatSessionRef.current.sendMessageStream({ message: userMsg.text });
-      
+
       let fullText = '';
       const modelMsgId = Date.now().toString();
-      
+
       // Add initial empty model message
       setMessages(prev => [...prev, { role: 'model', text: '', timestamp: new Date() }]);
 
       for await (const chunk of result) {
         const text = chunk.text || '';
         fullText += text;
-        
+
         // Update the last message with the accumulated text
         setMessages(prev => {
           const newMessages = [...prev];
@@ -103,7 +103,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             <div className="bg-gradient-to-r from-brand-blue to-blue-600 p-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
                 <div className="p-1.5 bg-white/20 rounded-full">
-                   <Bot size={20} />
+                  <Bot size={20} />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">Lekol Alèz AI</h3>
@@ -119,14 +119,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${
-                    msg.role === 'user' 
-                      ? 'bg-brand-blue text-white rounded-br-none' 
+                  <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.role === 'user'
+                      ? 'bg-brand-blue text-white rounded-br-none'
                       : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-none'
-                  }`}>
+                    }`}>
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                     {msg.text === '' && isLoading && idx === messages.length - 1 && (
-                        <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse ml-1 align-middle"></span>
+                      <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse ml-1 align-middle"></span>
                     )}
                   </div>
                 </div>
@@ -146,7 +145,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
                   disabled={isLoading}
                 />
-                <button 
+                <button
                   onClick={handleSend}
                   disabled={isLoading || !input.trim()}
                   className="text-brand-blue hover:text-brand-orange transition-colors disabled:opacity-50"
@@ -167,10 +166,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       >
         {isOpen ? <X size={28} /> : <MessageCircle size={28} />}
         {!isOpen && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-sky-500"></span>
-            </span>
+          <span className="absolute -top-1 -right-1 flex h-4 w-4">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-sky-500"></span>
+          </span>
         )}
       </motion.button>
     </div>
