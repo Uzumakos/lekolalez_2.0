@@ -247,3 +247,84 @@ CREATE TRIGGER trg_protect_user_role
   BEFORE UPDATE ON public.users
   FOR EACH ROW
   EXECUTE FUNCTION public.protect_user_role_escalation();
+
+
+-- ==============================================================================
+-- 5. EXTEND ROW LEVEL SECURITY (RLS) POLICIES TO INCLUDE 'super_admin'
+-- ==============================================================================
+
+-- Courses RLS Policies
+DROP POLICY IF EXISTS "Published courses are viewable by everyone." ON public.courses;
+CREATE POLICY "Published courses are viewable by everyone." 
+  ON public.courses FOR SELECT 
+  USING (
+    is_published = true 
+    OR status = 'published' 
+    OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin', 'instructor')
+  );
+
+DROP POLICY IF EXISTS "Instructors can create courses." ON public.courses;
+CREATE POLICY "Instructors can create courses." 
+  ON public.courses FOR INSERT 
+  WITH CHECK ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('instructor', 'admin', 'super_admin'));
+
+DROP POLICY IF EXISTS "Instructors can update own courses." ON public.courses;
+CREATE POLICY "Instructors can update own courses." 
+  ON public.courses FOR UPDATE 
+  USING (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+DROP POLICY IF EXISTS "Instructors can delete own courses." ON public.courses;
+CREATE POLICY "Instructors can delete own courses." 
+  ON public.courses FOR DELETE 
+  USING (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+-- Users RLS Policies
+DROP POLICY IF EXISTS "Users can update own profile." ON public.users;
+CREATE POLICY "Users can update own profile." 
+  ON public.users FOR UPDATE 
+  USING (auth.uid() = id OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK (auth.uid() = id OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+DROP POLICY IF EXISTS "Only admins can delete users." ON public.users;
+CREATE POLICY "Only admins can delete users." 
+  ON public.users FOR DELETE 
+  USING ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+-- Site Content RLS Policies
+DROP POLICY IF EXISTS "Only admins can modify site content." ON public.site_content;
+CREATE POLICY "Only admins can modify site content." 
+  ON public.site_content FOR ALL 
+  USING ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+-- Subscriptions RLS Policies
+DROP POLICY IF EXISTS "Users can view own subscriptions." ON public.subscriptions;
+CREATE POLICY "Users can view own subscriptions." 
+  ON public.subscriptions FOR SELECT 
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+DROP POLICY IF EXISTS "Users can submit pending subscriptions." ON public.subscriptions;
+CREATE POLICY "Users can submit pending subscriptions." 
+  ON public.subscriptions FOR INSERT 
+  WITH CHECK (
+    (user_id = auth.uid() AND status = 'pending_verification')
+    OR ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  );
+
+DROP POLICY IF EXISTS "Admins can update subscriptions." ON public.subscriptions;
+CREATE POLICY "Admins can update subscriptions." 
+  ON public.subscriptions FOR UPDATE 
+  USING ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+-- Enrollments RLS Policies
+DROP POLICY IF EXISTS "Users can view own enrollments." ON public.enrollments;
+CREATE POLICY "Users can view own enrollments." 
+  ON public.enrollments FOR SELECT 
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+
+DROP POLICY IF EXISTS "Users can update own enrollments." ON public.enrollments;
+CREATE POLICY "Users can update own enrollments." 
+  ON public.enrollments FOR UPDATE 
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
+

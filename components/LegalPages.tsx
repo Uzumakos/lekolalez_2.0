@@ -775,16 +775,41 @@ const LegalTemplate: React.FC<LegalTemplateProps> = ({ data, siteContent, heroCo
   );
 };
 
+const LEGAL_SECTION_ICONS = [Sparkles, UserCheck, BookOpen, CreditCard, Lock, Scale, ShieldCheck, HelpCircle];
+
 // -------------------------------------------------------------
 // Exported Component: Terms of Service Page
 // -------------------------------------------------------------
 export const TermsPage: React.FC<LegalPagesProps> = ({ siteContent }) => {
   const { language } = useLanguage();
-  const data = TERMS_CONTENT[language] || TERMS_CONTENT[Language.FRENCH];
+  const baseData = TERMS_CONTENT[language] || TERMS_CONTENT[Language.FRENCH];
+  const customTerms = siteContent?.legal?.terms;
+
+  const mergedData = customTerms?.sections?.length
+    ? {
+        ...baseData,
+        badge: customTerms.badge || baseData.badge,
+        title: customTerms.title || baseData.title,
+        subtitle: customTerms.subtitle || baseData.subtitle,
+        lastUpdated: customTerms.lastUpdated || baseData.lastUpdated,
+        needHelp: customTerms.needHelp || baseData.needHelp,
+        contactTeam: customTerms.contactTeam || baseData.contactTeam,
+        sections: customTerms.sections.map((sec, idx) => ({
+          id: sec.id || `terms-sec-${idx}`,
+          title: sec.title,
+          icon: LEGAL_SECTION_ICONS[idx % LEGAL_SECTION_ICONS.length],
+          content: sec.content,
+          callout:
+            sec.calloutType && sec.calloutType !== 'none' && sec.calloutText
+              ? { type: sec.calloutType, text: sec.calloutText }
+              : undefined,
+        })),
+      }
+    : baseData;
 
   return (
     <LegalTemplate 
-      data={data} 
+      data={mergedData} 
       siteContent={siteContent} 
       heroColor="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950" 
     />
@@ -796,11 +821,34 @@ export const TermsPage: React.FC<LegalPagesProps> = ({ siteContent }) => {
 // -------------------------------------------------------------
 export const PrivacyPage: React.FC<LegalPagesProps> = ({ siteContent }) => {
   const { language } = useLanguage();
-  const data = PRIVACY_CONTENT[language] || PRIVACY_CONTENT[Language.FRENCH];
+  const baseData = PRIVACY_CONTENT[language] || PRIVACY_CONTENT[Language.FRENCH];
+  const customPrivacy = siteContent?.legal?.privacy;
+
+  const mergedData = customPrivacy?.sections?.length
+    ? {
+        ...baseData,
+        badge: customPrivacy.badge || baseData.badge,
+        title: customPrivacy.title || baseData.title,
+        subtitle: customPrivacy.subtitle || baseData.subtitle,
+        lastUpdated: customPrivacy.lastUpdated || baseData.lastUpdated,
+        needHelp: customPrivacy.needHelp || baseData.needHelp,
+        contactTeam: customPrivacy.contactTeam || baseData.contactTeam,
+        sections: customPrivacy.sections.map((sec, idx) => ({
+          id: sec.id || `priv-sec-${idx}`,
+          title: sec.title,
+          icon: LEGAL_SECTION_ICONS[idx % LEGAL_SECTION_ICONS.length],
+          content: sec.content,
+          callout:
+            sec.calloutType && sec.calloutType !== 'none' && sec.calloutText
+              ? { type: sec.calloutType, text: sec.calloutText }
+              : undefined,
+        })),
+      }
+    : baseData;
 
   return (
     <LegalTemplate 
-      data={data} 
+      data={mergedData} 
       siteContent={siteContent} 
       heroColor="bg-gradient-to-r from-slate-900 via-slate-950 to-emerald-950" 
     />

@@ -210,17 +210,25 @@ export const AboutPage: React.FC<{ content: SiteContent['about'] }> = ({ content
   const { language } = useLanguage();
   const i18n = ABOUT_I18N[language] || ABOUT_I18N[Language.FRENCH];
 
-  // Use localized strings if current content matches default English or is empty
-  const isDefaultOrEmpty = !content?.title || content.title === "About Lekol Alèz";
+  const isDefaultOrEmpty =
+    !content?.title ||
+    content.title === "About Lekol Alèz" ||
+    content.title === "About Lekòl Alèz";
   const displayTitle = isDefaultOrEmpty ? i18n.title : content.title;
-  const displaySubtitle = !content?.subtitle || content.subtitle.includes("Empowering Haiti's Future")
-    ? i18n.subtitle
-    : content.subtitle;
-  const displayContent = !content?.content || content.content.includes("Lekol Alèz was founded")
-    ? i18n.content
-    : content.content;
+  const displaySubtitle =
+    !content?.subtitle || content.subtitle.includes("Empowering Haiti's Future")
+      ? i18n.subtitle
+      : content.subtitle;
+  const displayContent =
+    !content?.content ||
+    content.content.includes("Lekol Alèz was founded") ||
+    content.content.includes("Lekòl Alèz was founded")
+      ? i18n.content
+      : content.content;
 
   const staffMembers = (content?.staff && content.staff.length > 0) ? content.staff : DEFAULT_STAFF;
+  const statsList = content?.stats || [];
+  const customBlocks = content?.customBlocks || [];
 
   return (
     <div className="pt-24 pb-20">
@@ -241,9 +249,9 @@ export const AboutPage: React.FC<{ content: SiteContent['about'] }> = ({ content
             transition={{ delay: 0.2 }}
           >
             <img
-              src="https://ik.imagekit.io/tche25kem/ChatGPT%20Image%20Sep%207,%202026,%2004_05_39%20PM.png"
+              src={content?.imageUrl || "https://ik.imagekit.io/tche25kem/ChatGPT%20Image%20Sep%207,%202026,%2004_05_39%20PM.png"}
               alt="Team collaboration"
-              className="rounded-3xl shadow-2xl"
+              className="rounded-3xl shadow-2xl w-full object-cover"
             />
           </motion.div>
           <motion.div
@@ -256,24 +264,62 @@ export const AboutPage: React.FC<{ content: SiteContent['about'] }> = ({ content
           </motion.div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-          {content.stats.map((stat, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1 }}
-              className="bg-gray-50 p-8 rounded-2xl text-center border border-gray-100"
-            >
-              <h3 className="text-4xl font-bold text-brand-blue mb-2">{stat.value}</h3>
-              <p className="text-gray-600 font-medium uppercase tracking-wide text-sm">
-                {i18n.statsLabels[stat.label] || stat.label}
-              </p>
-            </motion.div>
-          ))}
-        </div>
+        {/* Dynamic Stats Grid */}
+        {statsList.length > 0 && (
+          <div
+            className={`grid grid-cols-2 ${
+              statsList.length === 1
+                ? 'md:grid-cols-1'
+                : statsList.length === 2
+                ? 'md:grid-cols-2'
+                : statsList.length === 3
+                ? 'md:grid-cols-3'
+                : 'md:grid-cols-4'
+            } gap-8 mb-8`}
+          >
+            {statsList.map((stat, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-gray-50 p-8 rounded-2xl text-center border border-gray-100"
+              >
+                <h3 className="text-4xl font-bold text-brand-blue mb-2">{stat.value}</h3>
+                <p className="text-gray-600 font-medium uppercase tracking-wide text-sm">
+                  {i18n.statsLabels[stat.label] || stat.label}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Custom Content Blocks added by Admin */}
+        {customBlocks.length > 0 && (
+          <div className="mt-16 space-y-10">
+            {customBlocks.map((block) => (
+              <div
+                key={block.id}
+                className="bg-gray-50 rounded-3xl p-8 md:p-12 border border-gray-100 grid grid-cols-1 md:grid-cols-12 gap-8 items-center"
+              >
+                <div className={block.imageUrl ? 'md:col-span-7 space-y-4' : 'md:col-span-12 space-y-4'}>
+                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900">{block.title}</h3>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{block.content}</p>
+                </div>
+                {block.imageUrl && (
+                  <div className="md:col-span-5">
+                    <img
+                      src={block.imageUrl}
+                      alt={block.title}
+                      className="w-full h-60 object-cover rounded-2xl shadow-md"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Meet the Staff Section */}
         {staffMembers.length > 0 && (
@@ -285,10 +331,14 @@ export const AboutPage: React.FC<{ content: SiteContent['about'] }> = ({ content
               className="text-center max-w-3xl mx-auto mb-16"
             >
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-sky-50 text-brand-blue rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-sky-100">
-                <Users size={14} /> {i18n.staffTitle}
+                <Users size={14} /> {content?.staffBadge || i18n.staffTitle}
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{i18n.staffTitle}</h2>
-              <p className="text-lg text-gray-600">{i18n.staffSubtitle}</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                {content?.staffTitle || i18n.staffTitle}
+              </h2>
+              <p className="text-lg text-gray-600">
+                {content?.staffSubtitle || i18n.staffSubtitle}
+              </p>
             </motion.div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
@@ -350,6 +400,7 @@ const getInstructorAvatar = (instructor: any, name: string): string => {
 export const InstructorsPage: React.FC<{ content: SiteContent['instructors'], courses: Course[] }> = ({ content, courses }) => {
   const { language } = useLanguage();
   const i18n = INSTRUCTORS_I18N[language] || INSTRUCTORS_I18N[Language.FRENCH];
+  const defaultRoleLabel = content?.defaultRole || i18n.defaultRole;
 
   // Derive unique instructors from courses
   const instructorNames = courses.map(c => getInstructorName(c.instructor));
@@ -360,7 +411,7 @@ export const InstructorsPage: React.FC<{ content: SiteContent['instructors'], co
     const instructorObj = course?.instructor;
     return {
       name,
-      role: (typeof instructorObj === 'object' && instructorObj?.title) || i18n.defaultRole,
+      role: (typeof instructorObj === 'object' && instructorObj?.title) || defaultRoleLabel,
       coursesCount: courses.filter(c => getInstructorName(c.instructor) === name).length,
       image: getInstructorAvatar(instructorObj, name),
       students: courses.filter(c => getInstructorName(c.instructor) === name).reduce((acc, c) => acc + c.students, 0)
@@ -424,51 +475,54 @@ export const PricingPage: React.FC<{ content: SiteContent['pricing'], onOpenAuth
     }
   };
 
-  // Determine localized title & subtitle
+  // Determine localized title & subtitle when default values are untouched
   const defaultTitles = [
     "Plan senp, transparan",
-    "Tarifs",
-    "Pricing",
-    "Des tarifs simples et transparents",
     "Simple, Transparent Pricing"
   ];
   const defaultSubtitles = [
     "Envesti nan avni w san kraze bank lan. Aksè gratis chak jou disponib pou tout moun!",
-    "Investissez dans votre avenir sans vous ruiner. Accès gratuit chaque jour disponible pour tous !",
     "Invest in your future without breaking the bank. Free daily access available for everyone!"
   ];
 
-  const displayTitle = (!content?.title || defaultTitles.some(t => content.title.toLowerCase().includes(t.toLowerCase())))
+  const displayTitle = (!content?.title || defaultTitles.includes(content.title))
     ? i18n.title
     : content.title;
 
-  const displaySubtitle = (!content?.subtitle || defaultSubtitles.some(s => content.subtitle.toLowerCase().includes(s.toLowerCase())))
+  const displaySubtitle = (!content?.subtitle || defaultSubtitles.includes(content.subtitle))
     ? i18n.subtitle
     : content.subtitle;
 
-  // Localize plans while preserving price, ID, isPopular
+  const popularBadgeText = content?.popularBadge || i18n.popularBadge;
+
+  // Respect admin-edited plan names, features, periods, and buttonText!
   const plans = (content?.plans || []).map(plan => {
+    const isDefaultFreeName = !plan.name || plan.name === 'Gratis (Free Access)';
+    const isDefaultPremName = !plan.name || plan.name === 'Premium Alèz';
+
     if (plan.id === 'free' || Number(plan.price) === 0) {
       return {
         ...plan,
-        name: i18n.freePlan.name,
-        period: i18n.freePlan.period,
-        features: i18n.freePlan.features,
-        buttonText: i18n.freePlan.buttonText
+        name: isDefaultFreeName ? i18n.freePlan.name : plan.name,
+        period: plan.period && plan.period !== '/mwa' ? plan.period : i18n.freePlan.period,
+        features: plan.features && plan.features.length > 0 ? plan.features : i18n.freePlan.features,
+        buttonText: plan.buttonText && plan.buttonText !== 'Kòmanse Gratis' ? plan.buttonText : i18n.freePlan.buttonText
       };
     }
     if (plan.id === 'premium' || plan.isPopular) {
       return {
         ...plan,
-        name: i18n.premiumPlan.name,
-        period: i18n.premiumPlan.period,
-        features: i18n.premiumPlan.features,
-        buttonText: i18n.premiumPlan.buttonText(plan.price || '1.99')
+        name: isDefaultPremName ? i18n.premiumPlan.name : plan.name,
+        period: plan.period && plan.period !== '/mwa' ? plan.period : i18n.premiumPlan.period,
+        features: plan.features && plan.features.length > 0 ? plan.features : i18n.premiumPlan.features,
+        buttonText: plan.buttonText && !plan.buttonText.startsWith('Chwazi Premium')
+          ? plan.buttonText
+          : i18n.premiumPlan.buttonText(plan.price || '1.99')
       };
     }
     return {
       ...plan,
-      period: i18n.freePlan.period,
+      period: plan.period || i18n.freePlan.period,
       buttonText: plan.buttonText || i18n.customButtonText
     };
   });
@@ -493,7 +547,7 @@ export const PricingPage: React.FC<{ content: SiteContent['pricing'], onOpenAuth
             >
               {plan.isPopular && (
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-orange text-white px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wide">
-                  {i18n.popularBadge}
+                  {popularBadgeText}
                 </div>
               )}
               <h3 className={`text-xl font-bold mb-2 ${plan.isPopular ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
@@ -529,17 +583,26 @@ export const PricingPage: React.FC<{ content: SiteContent['pricing'], onOpenAuth
 };
 
 // --- Public Courses Page ---
-export const PublicCoursesPage: React.FC<{ courses: Course[], onOpenAuth: () => void }> = ({ courses, onOpenAuth }) => {
+export const PublicCoursesPage: React.FC<{
+  courses: Course[];
+  onOpenAuth: () => void;
+  siteContent?: SiteContent;
+}> = ({ courses, onOpenAuth, siteContent }) => {
   const { language } = useLanguage();
   const i18n = PUBLIC_COURSES_I18N[language] || PUBLIC_COURSES_I18N[Language.FRENCH];
   const sortedCourses = React.useMemo(() => sortCourses(courses), [courses]);
+
+  const displayTitle = siteContent?.catalog?.title || i18n.title;
+  const displaySubtitle = siteContent?.catalog?.subtitle || i18n.subtitle;
+  const emptyTitle = siteContent?.catalog?.emptyTitle || i18n.noCourses;
+  const emptyDesc = siteContent?.catalog?.emptyDesc || i18n.noCoursesDesc;
 
   return (
     <div className="pt-24 pb-20 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{i18n.title}</h1>
-          <p className="text-lg text-gray-600">{i18n.subtitle}</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{displayTitle}</h1>
+          <p className="text-lg text-gray-600">{displaySubtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -552,8 +615,8 @@ export const PublicCoursesPage: React.FC<{ courses: Course[], onOpenAuth: () => 
           ) : (
             <div className="col-span-full py-16 text-center text-gray-500 bg-white rounded-2xl border border-dashed border-gray-200">
               <BookOpen className="mx-auto mb-3 text-gray-400" size={40} />
-              <h3 className="text-lg font-bold text-gray-700 mb-1">{i18n.noCourses}</h3>
-              <p className="text-sm text-gray-400">{i18n.noCoursesDesc}</p>
+              <h3 className="text-lg font-bold text-gray-700 mb-1">{emptyTitle}</h3>
+              <p className="text-sm text-gray-400">{emptyDesc}</p>
             </div>
           )}
         </div>
@@ -561,4 +624,3 @@ export const PublicCoursesPage: React.FC<{ courses: Course[], onOpenAuth: () => 
     </div>
   );
 };
-

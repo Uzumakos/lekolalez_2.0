@@ -206,27 +206,108 @@ export interface StaffMember {
   bio?: string;
 }
 
+export interface CustomContentBlock {
+  id: string;
+  title: string;
+  content: string;
+  imageUrl?: string;
+}
+
+export interface HeroSlideContent {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+  ctaText?: string;
+  demoText?: string;
+}
+
+export interface WhyUsFeatureBlock {
+  id: string;
+  title: string;
+  desc: string;
+}
+
+export interface LegalSectionBlock {
+  id: string;
+  title: string;
+  content: string;
+  calloutType?: 'info' | 'success' | 'none';
+  calloutText?: string;
+}
+
+export interface LegalDocumentContent {
+  badge?: string;
+  title: string;
+  subtitle: string;
+  lastUpdated: string;
+  needHelp?: string;
+  contactTeam?: string;
+  sections: LegalSectionBlock[];
+}
+
 export interface SiteContent {
   about: {
     title: string;
     subtitle: string;
     content: string;
+    imageUrl?: string;
+    staffBadge?: string;
+    staffTitle?: string;
+    staffSubtitle?: string;
     stats: { label: string; value: string }[];
     staff?: StaffMember[];
+    customBlocks?: CustomContentBlock[];
   };
   pricing: {
     title: string;
     subtitle: string;
+    popularBadge?: string;
     plans: PricingPlan[];
   };
   instructors: {
     title: string;
     subtitle: string;
+    defaultRole?: string;
   };
   contact: {
     email: string;
     phone: string;
     address: string;
+  };
+  landing?: {
+    slides: HeroSlideContent[];
+    coursesBadge?: string;
+    coursesTitle?: string;
+    coursesViewAllText?: string;
+    whyBadge?: string;
+    whyTitle?: string;
+    whyDesc?: string;
+    whyImageUrl?: string;
+    whyCtaText?: string;
+    whyFeatures: WhyUsFeatureBlock[];
+    ctaTitle?: string;
+    ctaSubtitle?: string;
+    ctaPrimaryBtn?: string;
+    ctaSecondaryBtn?: string;
+    customBlocks?: CustomContentBlock[];
+  };
+  catalog?: {
+    title: string;
+    subtitle: string;
+    emptyTitle?: string;
+    emptyDesc?: string;
+  };
+  footer?: {
+    description: string;
+    platformTitle?: string;
+    companyTitle?: string;
+    contactTitle?: string;
+    copyrightText?: string;
+  };
+  legal?: {
+    terms: LegalDocumentContent;
+    privacy: LegalDocumentContent;
   };
   freeAccess: FreeAccessSettings;
   paymentGateways: PaymentGatewaySettings;
@@ -283,4 +364,4 @@ export interface AuditLogFilters {
   action?: string;
   search?: string;
   dateRange?: 'all' | 'today' | '7days' | '30days';
-}
+}

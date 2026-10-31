@@ -178,7 +178,7 @@ export const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({
     }
   }, [language]);
 
-  const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'instructor';
+  const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'instructor' || currentUser?.role === 'super_admin';
 
   const modules = useMemo(() => {
     if (!course) return [];

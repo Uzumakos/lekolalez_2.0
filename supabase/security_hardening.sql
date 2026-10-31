@@ -27,7 +27,7 @@ ALTER TABLE public.daily_video_usage ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own video usage." ON public.daily_video_usage;
 CREATE POLICY "Users can view own video usage."
   ON public.daily_video_usage FOR SELECT
-  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- Allow authenticated users to insert and update their own daily video usage
 DROP POLICY IF EXISTS "Deny direct client insert on daily_video_usage" ON public.daily_video_usage;
@@ -117,12 +117,13 @@ CREATE POLICY "Public profiles are viewable by everyone."
 DROP POLICY IF EXISTS "Users can update own profile." ON public.users;
 CREATE POLICY "Users can update own profile." 
   ON public.users FOR UPDATE 
-  USING (auth.uid() = id OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (auth.uid() = id OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK (auth.uid() = id OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Only admins can delete users." ON public.users;
 CREATE POLICY "Only admins can delete users." 
   ON public.users FOR DELETE 
-  USING ((SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Users can insert their own profile." ON public.users;
 CREATE POLICY "Users can insert their own profile." 
@@ -175,7 +176,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_payment_reference
 DROP POLICY IF EXISTS "Users can view own subscriptions." ON public.subscriptions;
 CREATE POLICY "Users can view own subscriptions." 
   ON public.subscriptions FOR SELECT 
-  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- Users can only insert pending_verification subscriptions (for manual payments)
 -- Normal users can NEVER directly insert status = 'active'
@@ -185,14 +186,14 @@ CREATE POLICY "Users can submit pending subscriptions."
   ON public.subscriptions FOR INSERT 
   WITH CHECK (
     (user_id = auth.uid() AND status = 'pending_verification')
-    OR ((SELECT role FROM public.users WHERE id = auth.uid()) = 'admin')
+    OR ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
   );
 
 -- Only admins can update subscriptions (approving/rejecting/modifying period)
 DROP POLICY IF EXISTS "Admins can update subscriptions." ON public.subscriptions;
 CREATE POLICY "Admins can update subscriptions." 
   ON public.subscriptions FOR UPDATE 
-  USING ((SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 
 -- ==============================================================================
@@ -210,23 +211,24 @@ CREATE POLICY "Published courses are viewable by everyone."
   USING (
     is_published = true 
     OR status = 'published' 
-    OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'instructor')
+    OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin', 'instructor')
   );
 
 DROP POLICY IF EXISTS "Instructors can create courses." ON public.courses;
 CREATE POLICY "Instructors can create courses." 
   ON public.courses FOR INSERT 
-  WITH CHECK ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('instructor', 'admin'));
+  WITH CHECK ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('instructor', 'admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Instructors can update own courses." ON public.courses;
 CREATE POLICY "Instructors can update own courses." 
   ON public.courses FOR UPDATE 
-  USING (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Instructors can delete own courses." ON public.courses;
 CREATE POLICY "Instructors can delete own courses." 
   ON public.courses FOR DELETE 
-  USING (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (instructor_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 
 -- ==============================================================================
@@ -238,7 +240,7 @@ ALTER TABLE IF EXISTS public.enrollments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own enrollments." ON public.enrollments;
 CREATE POLICY "Users can view own enrollments." 
   ON public.enrollments FOR SELECT 
-  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Users can create own enrollments." ON public.enrollments;
 CREATE POLICY "Users can create own enrollments." 
@@ -248,7 +250,7 @@ CREATE POLICY "Users can create own enrollments."
 DROP POLICY IF EXISTS "Users can update own enrollments." ON public.enrollments;
 CREATE POLICY "Users can update own enrollments." 
   ON public.enrollments FOR UPDATE 
-  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 ALTER TABLE IF EXISTS public.lesson_progress ADD COLUMN IF NOT EXISTS enrollment_id UUID;
 ALTER TABLE IF EXISTS public.lesson_progress ENABLE ROW LEVEL SECURITY;
@@ -281,8 +283,8 @@ CREATE POLICY "Site content viewable by everyone."
 DROP POLICY IF EXISTS "Only admins can modify site content." ON public.site_content;
 CREATE POLICY "Only admins can modify site content." 
   ON public.site_content FOR ALL 
-  USING ((SELECT role FROM public.users WHERE id = auth.uid()) = 'admin')
-  WITH CHECK ((SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK ((SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 
 -- ==============================================================================
@@ -317,8 +319,8 @@ BEGIN
   -- 2. Fetch user role
   SELECT role INTO v_user_role FROM public.users WHERE id = v_user_id;
 
-  -- Admin & Instructor have unlimited access
-  IF v_user_role IN ('admin', 'instructor') THEN
+  -- Admin, Super Admin & Instructor have unlimited access
+  IF v_user_role IN ('admin', 'super_admin', 'instructor') THEN
     RETURN jsonb_build_object(
       'allowed', true,
       'is_premium', true,
@@ -447,12 +449,12 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own notifications." ON public.notifications;
 CREATE POLICY "Users can view own notifications."
   ON public.notifications FOR SELECT
-  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Users can update own notifications." ON public.notifications;
 CREATE POLICY "Users can update own notifications."
   ON public.notifications FOR UPDATE
-  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Anyone can insert notifications." ON public.notifications;
 CREATE POLICY "Anyone can insert notifications."
@@ -475,9 +477,9 @@ DECLARE
   v_new_status TEXT;
   v_end_date TIMESTAMPTZ;
 BEGIN
-  -- 1. Strictly verify caller is admin
+  -- 1. Strictly verify caller is admin or super_admin
   SELECT role INTO v_admin_role FROM public.users WHERE id = v_admin_id;
-  IF v_admin_role IS DISTINCT FROM 'admin' THEN
+  IF v_admin_role IS NULL OR v_admin_role NOT IN ('admin', 'super_admin') THEN
     RAISE EXCEPTION 'Access Denied: Only platform administrators can verify payments.';
   END IF;
 
@@ -562,25 +564,25 @@ CREATE POLICY "Anyone can create password reset requests"
   ON public.password_reset_requests FOR INSERT
   WITH CHECK (true);
 
--- Only Admins can view password reset requests
+-- Only Admins and Super Admins can view password reset requests
 DROP POLICY IF EXISTS "Admins can view password reset requests" ON public.password_reset_requests;
 CREATE POLICY "Admins can view password reset requests"
   ON public.password_reset_requests FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.users
-      WHERE public.users.id = auth.uid() AND public.users.role = 'admin'
+      WHERE public.users.id = auth.uid() AND public.users.role IN ('admin', 'super_admin')
     )
   );
 
--- Only Admins can update password reset requests (resolve them)
+-- Only Admins and Super Admins can update password reset requests (resolve them)
 DROP POLICY IF EXISTS "Admins can update password reset requests" ON public.password_reset_requests;
 CREATE POLICY "Admins can update password reset requests"
   ON public.password_reset_requests FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM public.users
-      WHERE public.users.id = auth.uid() AND public.users.role = 'admin'
+      WHERE public.users.id = auth.uid() AND public.users.role IN ('admin', 'super_admin')
     )
   );
 
@@ -603,9 +605,9 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
-  -- 2. Check if caller is admin
+  -- 2. Check if caller is admin or super_admin
   SELECT role INTO caller_role FROM public.users WHERE id = auth.uid();
-  IF caller_role != 'admin' THEN
+  IF caller_role IS NULL OR caller_role NOT IN ('admin', 'super_admin') THEN
     RAISE EXCEPTION 'Unauthorized: Only administrators can change user passwords.';
   END IF;
 

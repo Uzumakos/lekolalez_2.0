@@ -15,14 +15,17 @@ CREATE POLICY "Public profiles are viewable by everyone."
   ON users FOR SELECT USING (true);
 
 -- Users can update their own profile. Admins can update any profile.
+DROP POLICY IF EXISTS "Users can update own profile." ON users;
 CREATE POLICY "Users can update own profile." 
   ON users FOR UPDATE 
-  USING (auth.uid() = id OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING (auth.uid() = id OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK (auth.uid() = id OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- Only admins can delete users
+DROP POLICY IF EXISTS "Only admins can delete users." ON users;
 CREATE POLICY "Only admins can delete users." 
   ON users FOR DELETE 
-  USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING ((SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- Allow authenticated user to insert their own profile, or allow anon during registration
 DROP POLICY IF EXISTS "Users can insert their own profile." ON users;
@@ -67,40 +70,48 @@ CREATE TRIGGER on_auth_user_created
 
 -- 2. COURSES
 -- Anyone can read published courses.
+DROP POLICY IF EXISTS "Published courses are viewable by everyone." ON courses;
 CREATE POLICY "Published courses are viewable by everyone." 
   ON courses FOR SELECT 
-  USING (is_published = true OR status = 'published' OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'instructor'));
+  USING (is_published = true OR status = 'published' OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin', 'instructor'));
 
--- Instructors can create courses
+-- Instructors and admins can create courses
+DROP POLICY IF EXISTS "Instructors can create courses." ON courses;
 CREATE POLICY "Instructors can create courses." 
   ON courses FOR INSERT 
-  WITH CHECK ((SELECT role FROM users WHERE id = auth.uid()) IN ('instructor', 'admin'));
+  WITH CHECK ((SELECT role FROM users WHERE id = auth.uid()) IN ('instructor', 'admin', 'super_admin'));
 
--- Instructors can update their own courses. Admins can update any.
+-- Instructors can update their own courses. Admins and Super Admins can update any.
+DROP POLICY IF EXISTS "Instructors can update own courses." ON courses;
 CREATE POLICY "Instructors can update own courses." 
   ON courses FOR UPDATE 
-  USING (instructor_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING (instructor_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK (instructor_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
--- Instructors can delete their own courses. Admins can delete any.
+-- Instructors can delete their own courses. Admins and Super Admins can delete any.
+DROP POLICY IF EXISTS "Instructors can delete own courses." ON courses;
 CREATE POLICY "Instructors can delete own courses." 
   ON courses FOR DELETE 
-  USING (instructor_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING (instructor_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- 3. ENROLLMENTS
 -- Users can see their own enrollments
+DROP POLICY IF EXISTS "Users can view own enrollments." ON enrollments;
 CREATE POLICY "Users can view own enrollments." 
   ON enrollments FOR SELECT 
-  USING (user_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- Users can insert their own enrollments
+DROP POLICY IF EXISTS "Users can create own enrollments." ON enrollments;
 CREATE POLICY "Users can create own enrollments." 
   ON enrollments FOR INSERT 
   WITH CHECK (user_id = auth.uid());
 
 -- Users can update their own enrollments (e.g., progress)
+DROP POLICY IF EXISTS "Users can update own enrollments." ON enrollments;
 CREATE POLICY "Users can update own enrollments." 
   ON enrollments FOR UPDATE 
-  USING (user_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- 4. LESSON PROGRESS
 -- Users can view their own progress via enrollment join
@@ -143,8 +154,8 @@ CREATE POLICY "Site content viewable by everyone."
 DROP POLICY IF EXISTS "Only admins can modify site content." ON site_content;
 CREATE POLICY "Only admins can modify site content." 
   ON site_content FOR ALL 
-  USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin')
-  WITH CHECK ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING ((SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'))
+  WITH CHECK ((SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 -- 7. CERTIFICATES
 -- Users can view their own certificates
@@ -173,14 +184,14 @@ ALTER TABLE IF EXISTS subscriptions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own subscriptions." ON subscriptions;
 CREATE POLICY "Users can view own subscriptions." 
   ON subscriptions FOR SELECT 
-  USING (user_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING (user_id = auth.uid() OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Users can insert own subscriptions or registration." ON subscriptions;
 CREATE POLICY "Users can insert own subscriptions or registration." 
   ON subscriptions FOR INSERT 
-  WITH CHECK (user_id = auth.uid() OR auth.role() = 'anon' OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  WITH CHECK (user_id = auth.uid() OR auth.role() = 'anon' OR (SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));
 
 DROP POLICY IF EXISTS "Admins can update subscriptions." ON subscriptions;
 CREATE POLICY "Admins can update subscriptions." 
   ON subscriptions FOR UPDATE 
-  USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+  USING ((SELECT role FROM users WHERE id = auth.uid()) IN ('admin', 'super_admin'));

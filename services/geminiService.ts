@@ -11,6 +11,32 @@ if (!apiKey) {
 
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+export const generateCourseDescription = async (
+  prompt: string,
+  context: string = 'General Education Platform'
+): Promise<string> => {
+  if (!ai) {
+    if (prompt.toLowerCase().includes('subtitle')) {
+      return "Propulser l'avenir d'Haïti grâce à une éducation moderne et accessible à tous";
+    }
+    return "Lekòl Alèz a été fondé avec une mission claire : démocratiser l'accès à une éducation d'excellence en Haïti et au-delà. Grâce à notre plateforme trilingue (Français, Créole haïtien et Anglais), nous accompagnons chaque élève vers la réussite académique avec des cours vidéo interactifs, des quiz pratiques et un tuteur IA disponible 24h/24.";
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Write a concise, engaging French text for "${prompt}" in the context of "${context}". Return only the text without quotes or markdown headings.`,
+    });
+    return response.text?.trim() || '';
+  } catch (error) {
+    console.warn('Gemini generation fallback:', error);
+    if (prompt.toLowerCase().includes('subtitle')) {
+      return "Propulser l'avenir d'Haïti grâce à une éducation moderne et accessible à tous";
+    }
+    return "Lekòl Alèz a été fondé avec une mission claire : démocratiser l'accès à une éducation d'excellence en Haïti et au-delà.";
+  }
+};
+
 export const createLMSChatSession = (
   courses: Course[],
   enrolledCourseIds: string[] = [],

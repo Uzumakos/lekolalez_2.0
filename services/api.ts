@@ -970,6 +970,36 @@ const isUUID = (val?: string): boolean =>
   typeof val === 'string' &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
+const executeAdminDbAction = async (params: {
+  operation: 'course_create' | 'course_update' | 'course_delete' | 'site_content_upsert';
+  id?: string;
+  payload?: any;
+  instructorUpdate?: Record<string, any>;
+}) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return null;
+
+    const resp = await fetch('/api/admin/db-action', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(params),
+    });
+
+    if (resp.ok) {
+      return await resp.json();
+    }
+    return null;
+  } catch (err) {
+    console.warn('Admin DB fallback notice:', err);
+    return null;
+  }
+};
+
 // ─── Courses API ───────────────────────────────────────────────────────────────
 
 export const coursesAPI = {
@@ -1050,7 +1080,7 @@ export const coursesAPI = {
         .from('courses')
         .select('*, instructor:users!instructor_id(id, first_name, last_name, avatar, title, bio, location)');
 
-      if (profile?.role !== 'admin') {
+      if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
         q = q.eq('instructor_id', authUser.id);
       }
 
@@ -1139,9 +1169,9 @@ export const coursesAPI = {
     };
 
     // Update instructor profile in users table if instructor metadata is provided
+    const userUpdate: Record<string, any> = {};
     if (courseData.instructor && typeof courseData.instructor === 'object') {
       const inst = courseData.instructor;
-      const userUpdate: Record<string, any> = {};
       if (inst.fullName) {
         const parts = inst.fullName.trim().split(' ');
         userUpdate.first_name = parts[0] || 'Instructor';
@@ -1171,20 +1201,32 @@ export const coursesAPI = {
         .maybeSingle();
       data = retry.data;
       error = retry.error;
-    } else if ((error || !data) && supabaseAdmin) {
-      // If RLS blocked insert, fallback to supabaseAdmin
-      console.warn('Retrying course insert via admin client due to RLS restriction...');
-      const adminRes = await supabaseAdmin
-        .from('courses')
-        .insert(insertPayload)
-        .select('*, instructor:users!instructor_id(id, first_name, last_name, avatar, title, bio, location)')
-        .maybeSingle();
-      data = adminRes.data;
-      error = adminRes.error;
+    }
+
+    if (error || !data) {
+      // Fallback to verified server-side admin DB action when RLS restricts super_admin/admin
+      const fallbackRes = await executeAdminDbAction({
+        operation: 'course_create',
+        payload: insertPayload,
+        instructorUpdate: Object.keys(userUpdate).length > 0 ? userUpdate : undefined,
+      });
+      if (fallbackRes?.data) {
+        data = fallbackRes.data;
+        error = null;
+      }
     }
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('Failed to create course');
+
+    auditLogsAPI.log({
+      action: 'course_created',
+      actionCategory: 'courses',
+      targetType: 'course',
+      targetId: data.id,
+      targetLabel: data.title,
+      details: { category: data.category, price: data.price },
+    }).catch(() => {});
 
     return { course: mapCourseRow(data) };
   },
@@ -1228,9 +1270,9 @@ export const coursesAPI = {
     updateObj.updated_at = new Date().toISOString();
 
     // Update instructor profile in users table if instructor metadata is provided
+    const userUpdate: Record<string, any> = {};
     if (courseData.instructor && typeof courseData.instructor === 'object') {
       const inst = courseData.instructor;
-      const userUpdate: Record<string, any> = {};
       if (inst.fullName) {
         const parts = inst.fullName.trim().split(' ');
         userUpdate.first_name = parts[0] || 'Instructor';
@@ -1266,25 +1308,45 @@ export const coursesAPI = {
         .maybeSingle();
       data = retry.data;
       error = retry.error;
-    } else if ((error || !data) && supabaseAdmin) {
-      // If RLS blocked update (returning error or updating 0 rows resulting in null data), fallback to supabaseAdmin
-      console.warn('Retrying course update via admin client...');
-      const adminRes = await supabaseAdmin
-        .from('courses')
-        .update(updateObj)
-        .eq('id', id)
-        .select('*, instructor:users!instructor_id(id, first_name, last_name, avatar, title, bio, location)')
-        .maybeSingle();
-      data = adminRes.data;
-      error = adminRes.error;
     }
 
-    if (!data) {
-      // If course record does not exist in the database, create it!
-      return coursesAPI.create({ ...courseData, id });
+    if (error || !data) {
+      // Fallback to verified server-side admin DB action when RLS restricts super_admin/admin
+      const fallbackRes = await executeAdminDbAction({
+        operation: 'course_update',
+        id,
+        payload: updateObj,
+        instructorUpdate: Object.keys(userUpdate).length > 0 ? userUpdate : undefined,
+      });
+      if (fallbackRes?.data) {
+        data = fallbackRes.data;
+        error = null;
+      }
     }
 
     if (error) throw new Error(error.message);
+
+    if (!data) {
+      // Check if course record genuinely does not exist in the database
+      const { data: existingCheck } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+      if (!existingCheck) {
+        return coursesAPI.create({ ...courseData, id });
+      }
+      throw new Error('Impossible de mettre à jour ce cours (vérifiez vos permissions RLS dans Supabase).');
+    }
+
+    auditLogsAPI.log({
+      action: 'course_updated',
+      actionCategory: 'courses',
+      targetType: 'course',
+      targetId: data.id,
+      targetLabel: data.title,
+      details: { category: data.category, price: data.price },
+    }).catch(() => {});
 
     return { course: mapCourseRow(data) };
   },
@@ -1318,15 +1380,16 @@ export const coursesAPI = {
       .select('*, instructor:users!instructor_id(id, first_name, last_name, avatar, title, bio, location)')
       .maybeSingle();
 
-    if ((error || !data) && supabaseAdmin) {
-      const adminRes = await supabaseAdmin
-        .from('courses')
-        .update(updateObj)
-        .eq('id', id)
-        .select('*, instructor:users!instructor_id(id, first_name, last_name, avatar, title, bio, location)')
-        .maybeSingle();
-      data = adminRes.data;
-      error = adminRes.error;
+    if (error || !data) {
+      const fallbackRes = await executeAdminDbAction({
+        operation: 'course_update',
+        id,
+        payload: updateObj,
+      });
+      if (fallbackRes?.data) {
+        data = fallbackRes.data;
+        error = null;
+      }
     }
 
     if (error) throw new Error(error.message);
@@ -1340,11 +1403,25 @@ export const coursesAPI = {
       return { message: 'Course deleted' };
     }
     let { error } = await supabase.from('courses').delete().eq('id', id);
-    if (error && (error.code === '42501' || error.message?.toLowerCase().includes('row-level security'))) {
-      const adminRes = await supabaseAdmin.from('courses').delete().eq('id', id);
-      error = adminRes.error;
+    if (error) {
+      const fallbackRes = await executeAdminDbAction({
+        operation: 'course_delete',
+        id,
+      });
+      if (fallbackRes?.success) {
+        error = null;
+      }
     }
     if (error) throw new Error(error.message);
+
+    auditLogsAPI.log({
+      action: 'course_deleted',
+      actionCategory: 'courses',
+      targetType: 'course',
+      targetId: id,
+      targetLabel: `Course ID: ${id}`,
+    }).catch(() => {});
+
     return { message: 'Course deleted' };
   },
 };
@@ -1753,6 +1830,10 @@ export const siteContentAPI = {
 
     const content = {
       ...data,
+      landing: data.landing || data.about?.landing || data.pricing?.landing || null,
+      catalog: data.catalog || data.about?.catalog || data.pricing?.catalog || null,
+      footer: data.footer || data.about?.footer || data.pricing?.footer || null,
+      legal: data.legal || data.about?.legal || data.pricing?.legal || null,
       freeAccess: data.pricing?.freeAccess || data.free_access || null,
       paymentGateways: data.pricing?.paymentGateways || data.payment_gateways || null,
     };
@@ -1765,6 +1846,10 @@ export const siteContentAPI = {
     pricing?: any;
     instructors?: any;
     contact?: any;
+    landing?: any;
+    catalog?: any;
+    footer?: any;
+    legal?: any;
     freeAccess?: any;
     paymentGateways?: any;
   }) => {
@@ -1781,9 +1866,18 @@ export const siteContentAPI = {
       .eq('id', authUser.id)
       .maybeSingle();
 
-    if (callerProfile?.role !== 'admin') {
+    const callerRole = callerProfile?.role || authUser.user_metadata?.role;
+    if (callerRole !== 'admin' && callerRole !== 'super_admin') {
       throw new Error('Unauthorized: Only administrators can modify site content.');
     }
+
+    const aboutMerged = {
+      ...content.about,
+      landing: content.landing || content.about?.landing,
+      catalog: content.catalog || content.about?.catalog,
+      footer: content.footer || content.about?.footer,
+      legal: content.legal || content.about?.legal,
+    };
 
     const pricingMerged = {
       ...content.pricing,
@@ -1793,7 +1887,7 @@ export const siteContentAPI = {
 
     const updatePayload = {
       key: 'main',
-      about: content.about,
+      about: aboutMerged,
       pricing: pricingMerged,
       instructors: content.instructors,
       contact: content.contact,
@@ -1801,13 +1895,33 @@ export const siteContentAPI = {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('site_content')
       .upsert(updatePayload, { onConflict: 'key' })
       .select()
       .maybeSingle();
 
+    if (error || !data) {
+      const fallbackRes = await executeAdminDbAction({
+        operation: 'site_content_upsert',
+        payload: updatePayload,
+      });
+      if (fallbackRes?.data) {
+        data = fallbackRes.data;
+        error = null;
+      }
+    }
+
     if (error) throw new Error(error.message);
+
+    // Log audit event for site content update
+    auditLogsAPI.log({
+      action: 'site_content_update',
+      actionCategory: 'settings',
+      targetType: 'site_content',
+      targetId: 'main',
+      targetLabel: 'Site Content & CMS',
+    }).catch(() => {});
 
     return { message: 'Site content updated successfully', content: data };
   },
@@ -1826,7 +1940,8 @@ export const siteContentAPI = {
       .eq('id', authUser.id)
       .maybeSingle();
 
-    if (callerProfile?.role !== 'admin') {
+    const callerRole = callerProfile?.role || authUser.user_metadata?.role;
+    if (callerRole !== 'admin' && callerRole !== 'super_admin') {
       throw new Error('Unauthorized: Only administrators can modify site content.');
     }
 
@@ -1856,11 +1971,22 @@ export const siteContentAPI = {
       updatePayload[section] = sectionData;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('site_content')
       .upsert(updatePayload, { onConflict: 'key' })
       .select()
       .maybeSingle();
+
+    if (error || !data) {
+      const fallbackRes = await executeAdminDbAction({
+        operation: 'site_content_upsert',
+        payload: updatePayload,
+      });
+      if (fallbackRes?.data) {
+        data = fallbackRes.data;
+        error = null;
+      }
+    }
 
     if (error) throw new Error(error.message);
 
@@ -2228,7 +2354,7 @@ export const videoAccessAPI = {
     isPremium: boolean;
   }> => {
     // Admin / instructor roles bypass video quotas
-    if (user?.role === 'admin' || user?.role === 'instructor') {
+    if (user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'instructor') {
       return { allowed: true, remaining: 999, watched: 0, limit, isPremium: true };
     }
 
@@ -2455,6 +2581,7 @@ export const videoAccessAPI = {
   } => {
     const isPremium =
       user?.role === 'admin' ||
+      user?.role === 'super_admin' ||
       user?.role === 'instructor' ||
       user?.accessLevel === 'premium' ||
       user?.subscriptionStatus === 'active';
@@ -2497,7 +2624,7 @@ export const monitoringAPI = {
     user: any,
     onNotify?: (title: string, message: string) => void
   ) => {
-    if (!user || user.role === 'admin' || user.role === 'instructor') return;
+    if (!user || user.role === 'admin' || user.role === 'super_admin' || user.role === 'instructor') return;
 
     try {
       const subInfo = await subscriptionsAPI.getCurrent(user.id);

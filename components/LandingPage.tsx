@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Users, Award, PlayCircle, ArrowRight, CheckCircle, Globe, ChevronRight } from 'lucide-react';
+import { BookOpen, Users, Award, PlayCircle, ArrowRight, CheckCircle, Globe, ChevronRight, Star, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Course, Language } from '../types';
+import { Course, Language, SiteContent } from '../types';
 import { CourseCard } from './CourseCard';
 import { useLanguage } from '../contexts/LanguageContext';
 import { sortCourses } from '../utils/courseUtils';
@@ -11,27 +11,33 @@ const WHY_US_FEATURES: Record<Language, { title: string; desc: string }[]> = {
     [Language.FRENCH]: [
         { title: 'Plateforme Trilingue', desc: 'Basculez facilement entre le français, le créole haïtien et l\'anglais.' },
         { title: 'Support Assistant IA', desc: 'Obtenez de l\'aide 24h/24 et 7j/7 grâce à notre tuteur intelligent.' },
-
-
     ],
     [Language.ENGLISH]: [
         { title: 'Trilingual Platform', desc: 'Seamlessly switch between English, French, and Creole.' },
         { title: 'AI Assistant Support', desc: 'Get 24/7 help from our intelligent tutor bot.' },
-
     ],
     [Language.CREOLE]: [
         { title: 'Platfòm Triling', desc: 'Chanje fasilman ant kreyòl, franse ak anglè san difikilte.' },
         { title: 'Sipò Asistan IA', desc: 'Jwenn èd 24 sou 24, 7 jou sou 7 gras ak titè entèlijan nou an.' },
-
     ]
 };
+
+const STAT_META = [
+    { icon: Users, color: 'text-brand-blue' },
+    { icon: BookOpen, color: 'text-brand-orange' },
+    { icon: Award, color: 'text-purple-600' },
+    { icon: Globe, color: 'text-green-600' },
+    { icon: Star, color: 'text-amber-500' },
+    { icon: Sparkles, color: 'text-indigo-600' },
+];
 
 interface LandingPageProps {
     featuredCourses: Course[];
     onOpenAuth: () => void;
+    siteContent?: SiteContent;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpenAuth }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpenAuth, siteContent }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const { t, language } = useLanguage();
 
@@ -40,6 +46,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
     }, [featuredCourses]);
 
     const HERO_SLIDES = useMemo(() => {
+        if (siteContent?.landing?.slides && siteContent.landing.slides.length > 0) {
+            return siteContent.landing.slides.map((s, idx) => ({
+                id: s.id || idx + 1,
+                image: s.image,
+                title: s.title,
+                subtitle: s.subtitle,
+                cta: s.ctaText || t('hero.cta'),
+                demo: s.demoText || t('hero.demo'),
+            }));
+        }
+
         const slidesText = {
             [Language.FRENCH]: [
                 {
@@ -93,36 +110,67 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
                 image: 'https://ik.imagekit.io/tche25kem/ChatGPT%20Image%20Sep%207,%202026,%2004_05_39%20PM.png',
                 title: currentText[0].title,
                 subtitle: currentText[0].subtitle,
-                cta: t('hero.cta')
+                cta: t('hero.cta'),
+                demo: t('hero.demo')
             },
             {
                 id: 2,
                 image: 'https://ik.imagekit.io/tche25kem/mom_son.jpeg',
                 title: currentText[1].title,
                 subtitle: currentText[1].subtitle,
-                cta: t('hero.cta')
+                cta: t('hero.cta'),
+                demo: t('hero.demo')
             },
             {
                 id: 3,
                 image: 'https://ik.imagekit.io/tche25kem/WhatsApp-Image-2024-03-29-at-7.07.42-PM.jpeg',
                 title: currentText[2].title,
                 subtitle: currentText[2].subtitle,
-                cta: t('hero.cta')
+                cta: t('hero.cta'),
+                demo: t('hero.demo')
             }
         ];
-    }, [language, t]);
+    }, [language, t, siteContent?.landing?.slides]);
+
+    useEffect(() => {
+        if (currentSlide >= HERO_SLIDES.length) {
+            setCurrentSlide(0);
+        }
+    }, [HERO_SLIDES.length, currentSlide]);
 
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
         }, 6000);
         return () => clearInterval(timer);
-    }, []);
+    }, [HERO_SLIDES.length]);
+
+    const statsItems = useMemo(() => {
+        if (siteContent?.about?.stats && siteContent.about.stats.length > 0) {
+            return siteContent.about.stats.map((s, idx) => ({
+                label: s.label,
+                value: s.value,
+                icon: STAT_META[idx % STAT_META.length].icon,
+                color: STAT_META[idx % STAT_META.length].color,
+            }));
+        }
+        return [
+            { label: t('stats.students'), value: '2k+', icon: Users, color: 'text-brand-blue' },
+            { label: t('stats.courses'), value: '350+', icon: BookOpen, color: 'text-brand-orange' },
+            { label: t('stats.instructors'), value: '5+', icon: Award, color: 'text-purple-600' },
+            { label: t('stats.countries'), value: '5+', icon: Globe, color: 'text-green-600' },
+        ];
+    }, [siteContent?.about?.stats, t]);
+
+    const whyFeaturesList =
+        siteContent?.landing?.whyFeatures && siteContent.landing.whyFeatures.length > 0
+            ? siteContent.landing.whyFeatures
+            : (WHY_US_FEATURES[language] || WHY_US_FEATURES[Language.FRENCH]);
 
     return (
         <>
             {/* Hero Section */}
-            <section className="relative min-h-screen min-h-[100dvh] w-full overflow-hidden flex items-center justify-center -mt-[80px]"> {/* Negative margin to go behind transparent nav */}
+            <section className="relative min-h-screen min-h-[100dvh] w-full overflow-hidden flex items-center justify-center -mt-[80px]">
                 <AnimatePresence mode='wait'>
                     {HERO_SLIDES.map((slide, index) => (
                         index === currentSlide && (
@@ -166,8 +214,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
                                             >
                                                 {slide.cta} <ArrowRight size={20} />
                                             </Link>
-                                            <button className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-bold text-lg rounded-2xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2">
-                                                <PlayCircle size={20} /> {t('hero.demo')}
+                                            <button
+                                                onClick={onOpenAuth}
+                                                className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-bold text-lg rounded-2xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2"
+                                            >
+                                                <PlayCircle size={20} /> {slide.demo || t('hero.demo')}
                                             </button>
                                         </div>
                                     </motion.div>
@@ -190,33 +241,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
             </section>
 
             {/* Stats Section */}
-            <section className="py-12 bg-white relative -mt-10 z-30 px-6">
-                <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-xl border border-gray-100 p-8 grid grid-cols-2 md:grid-cols-4 gap-8">
-                    {[
-                        { label: t('stats.students'), value: '2k+', icon: Users, color: 'text-brand-blue' },
-                        { label: t('stats.courses'), value: '350+', icon: BookOpen, color: 'text-brand-orange' },
-                        { label: t('stats.instructors'), value: '5+', icon: Award, color: 'text-purple-600' },
-                        { label: t('stats.countries'), value: '5+', icon: Globe, color: 'text-green-600' },
-                    ].map((stat, i) => (
-                        <div key={i} className="flex flex-col items-center text-center">
-                            <stat.icon className={`mb-3 ${stat.color}`} size={32} />
-                            <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
-                            <p className="text-gray-500 text-sm font-medium uppercase tracking-wide mt-1">{stat.label}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
+            {statsItems.length > 0 && (
+                <section className="py-12 bg-white relative -mt-10 z-30 px-6">
+                    <div
+                        className={`max-w-6xl mx-auto bg-white rounded-3xl shadow-xl border border-gray-100 p-8 grid grid-cols-2 ${
+                            statsItems.length === 1
+                                ? 'md:grid-cols-1'
+                                : statsItems.length === 2
+                                ? 'md:grid-cols-2'
+                                : statsItems.length === 3
+                                ? 'md:grid-cols-3'
+                                : 'md:grid-cols-4'
+                        } gap-8`}
+                    >
+                        {statsItems.map((stat, i) => (
+                            <div key={i} className="flex flex-col items-center text-center">
+                                <stat.icon className={`mb-3 ${stat.color}`} size={32} />
+                                <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
+                                <p className="text-gray-500 text-sm font-medium uppercase tracking-wide mt-1">{stat.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* Featured Courses */}
             <section id="courses" className="py-20 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
                         <div>
-                            <h2 className="text-sm font-bold text-brand-blue uppercase tracking-widest mb-2">{t('landing.discover')}</h2>
-                            <h3 className="text-3xl md:text-4xl font-bold text-gray-900">{t('landing.popularCourses')}</h3>
+                            <h2 className="text-sm font-bold text-brand-blue uppercase tracking-widest mb-2">
+                                {siteContent?.landing?.coursesBadge || t('landing.discover')}
+                            </h2>
+                            <h3 className="text-3xl md:text-4xl font-bold text-gray-900">
+                                {siteContent?.landing?.coursesTitle || t('landing.popularCourses')}
+                            </h3>
                         </div>
                         <Link to="/public-courses" className="text-gray-600 hover:text-brand-blue font-semibold flex items-center gap-2 transition-colors">
-                            {t('landing.viewAll')} <ArrowRight size={18} />
+                            {siteContent?.landing?.coursesViewAllText || t('landing.viewAll')} <ArrowRight size={18} />
                         </Link>
                     </div>
 
@@ -257,21 +319,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
                             <div className="absolute -top-10 -left-10 w-40 h-40 bg-brand-orange/10 rounded-full blur-3xl"></div>
                             <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-brand-blue/10 rounded-full blur-3xl"></div>
                             <img
-                                src="https://ik.imagekit.io/tche25kem/ChatGPT%20Image%20Sep%207,%202026,%2004_05_39%20PM.png"
+                                src={siteContent?.landing?.whyImageUrl || "https://ik.imagekit.io/tche25kem/ChatGPT%20Image%20Sep%207,%202026,%2004_05_39%20PM.png"}
                                 alt="Student learning"
                                 className="rounded-3xl shadow-2xl relative z-10 w-full"
                             />
                         </motion.div>
 
                         <div>
-                            <h2 className="text-sm font-bold text-brand-orange uppercase tracking-widest mb-2">{t('landing.whyChoose')}</h2>
-                            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">{t('landing.whyTitle')}</h3>
+                            <h2 className="text-sm font-bold text-brand-orange uppercase tracking-widest mb-2">
+                                {siteContent?.landing?.whyBadge || t('landing.whyChoose')}
+                            </h2>
+                            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                                {siteContent?.landing?.whyTitle || t('landing.whyTitle')}
+                            </h3>
                             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-                                {t('landing.whyDesc')}
+                                {siteContent?.landing?.whyDesc || t('landing.whyDesc')}
                             </p>
 
                             <div className="space-y-6">
-                                {(WHY_US_FEATURES[language] || WHY_US_FEATURES[Language.FRENCH]).map((feature, i) => (
+                                {whyFeaturesList.map((feature, i) => (
                                     <motion.div
                                         key={i}
                                         initial={{ opacity: 0, y: 20 }}
@@ -292,12 +358,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
                             </div>
 
                             <Link to="/signup" className="mt-10 inline-flex px-8 py-4 bg-brand-dark text-white font-bold rounded-xl hover:bg-gray-800 transition-all shadow-lg items-center gap-2">
-                                {t('landing.joinFree')} <ChevronRight size={20} />
+                                {siteContent?.landing?.whyCtaText || t('landing.joinFree')} <ChevronRight size={20} />
                             </Link>
                         </div>
                     </div>
                 </div>
             </section>
+
+            {/* Optional Custom Blocks added from Admin CMS */}
+            {siteContent?.landing?.customBlocks && siteContent.landing.customBlocks.length > 0 && (
+                <section className="py-16 bg-gray-50">
+                    <div className="max-w-7xl mx-auto px-6 space-y-12">
+                        {siteContent.landing.customBlocks.map((block) => (
+                            <div
+                                key={block.id}
+                                className="bg-white rounded-3xl p-8 md:p-12 border border-gray-100 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center"
+                            >
+                                <div className={block.imageUrl ? 'lg:col-span-7 space-y-4' : 'lg:col-span-12 space-y-4'}>
+                                    <h3 className="text-2xl md:text-3xl font-bold text-gray-900">{block.title}</h3>
+                                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">{block.content}</p>
+                                </div>
+                                {block.imageUrl && (
+                                    <div className="lg:col-span-5">
+                                        <img
+                                            src={block.imageUrl}
+                                            alt={block.title}
+                                            className="w-full h-64 object-cover rounded-2xl shadow-md"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* CTA Section */}
             <section className="py-20 px-6">
@@ -306,14 +400,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
                     <div className="absolute top-[-50%] left-[-20%] w-[800px] h-[800px] bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
 
                     <div className="relative z-10 max-w-3xl mx-auto">
-                        <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">{t('landing.ready')}</h2>
-                        <p className="text-xl text-blue-100 mb-10">{t('landing.readyDesc')}</p>
+                        <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+                            {siteContent?.landing?.ctaTitle || t('landing.ready')}
+                        </h2>
+                        <p className="text-xl text-blue-100 mb-10">
+                            {siteContent?.landing?.ctaSubtitle || t('landing.readyDesc')}
+                        </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
                             <Link to="/signup" className="px-8 py-4 bg-white text-brand-blue font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-xl">
-                                {t('auth.signUp')}
+                                {siteContent?.landing?.ctaPrimaryBtn || t('auth.signUp')}
                             </Link>
                             <Link to="/public-courses" className="px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-xl hover:bg-white/10 transition-colors">
-                                {t('landing.browse')}
+                                {siteContent?.landing?.ctaSecondaryBtn || t('landing.browse')}
                             </Link>
                         </div>
                     </div>

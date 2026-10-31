@@ -451,11 +451,16 @@ export default function App() {
           setSiteContent({
             about: {
               ...(response.content.about || INITIAL_SITE_CONTENT.about),
-              staff: response.content.about?.staff || INITIAL_SITE_CONTENT.about.staff
+              staff: response.content.about?.staff || INITIAL_SITE_CONTENT.about.staff,
+              customBlocks: response.content.about?.customBlocks || [],
             },
             pricing: response.content.pricing || INITIAL_SITE_CONTENT.pricing,
             instructors: response.content.instructors || INITIAL_SITE_CONTENT.instructors,
             contact: response.content.contact || INITIAL_SITE_CONTENT.contact,
+            landing: response.content.landing || response.content.about?.landing || undefined,
+            catalog: response.content.catalog || response.content.about?.catalog || undefined,
+            footer: response.content.footer || response.content.about?.footer || undefined,
+            legal: response.content.legal || response.content.about?.legal || undefined,
             freeAccess: response.content.freeAccess || INITIAL_SITE_CONTENT.freeAccess,
             paymentGateways: response.content.paymentGateways || INITIAL_SITE_CONTENT.paymentGateways,
           });
@@ -640,6 +645,7 @@ export default function App() {
                     <LandingPage
                       featuredCourses={courses}
                       onOpenAuth={() => setIsAuthModalOpen(true)}
+                      siteContent={siteContent}
                     />
                   </PublicLayout>
                 } />
@@ -670,7 +676,11 @@ export default function App() {
                 } />
                 <Route path="/public-courses" element={
                   <PublicLayout onOpenAuth={() => setIsAuthModalOpen(true)} siteContent={siteContent}>
-                    <PublicCoursesPage courses={courses} onOpenAuth={() => setIsAuthModalOpen(true)} />
+                    <PublicCoursesPage
+                      courses={courses}
+                      onOpenAuth={() => setIsAuthModalOpen(true)}
+                      siteContent={siteContent}
+                    />
                   </PublicLayout>
                 } />
                 <Route path="/courses" element={<Navigate to="/public-courses" replace />} />

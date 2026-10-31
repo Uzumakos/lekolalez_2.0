@@ -139,7 +139,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
                         <BrandLogo variant="light" />
                       </div>
                       <p className="text-slate-400 leading-relaxed mb-6">
-                          {t('footer.about')}
+                          {siteContent.footer?.description || t('footer.about')}
                       </p>
                       <div className="flex gap-4">
                           {[1,2,3,4].map(i => (
@@ -151,7 +151,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
                   </div>
 
                   <div>
-                      <h4 className="font-bold text-lg mb-6">{t('footer.platform')}</h4>
+                      <h4 className="font-bold text-lg mb-6">{siteContent.footer?.platformTitle || t('footer.platform')}</h4>
                       <ul className="space-y-4 text-slate-400">
                           <li><Link to="/public-courses" className="hover:text-white transition-colors">{t('nav.courses')}</Link></li>
                           <li><Link to="/instructors" className="hover:text-white transition-colors">{t('nav.instructors')}</Link></li>
@@ -160,7 +160,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
                   </div>
 
                   <div>
-                      <h4 className="font-bold text-lg mb-6">{t('footer.company')}</h4>
+                      <h4 className="font-bold text-lg mb-6">{siteContent.footer?.companyTitle || t('footer.company')}</h4>
                       <ul className="space-y-4 text-slate-400">
                           <li><Link to="/about" className="hover:text-white transition-colors">{t('nav.about')}</Link></li>
                           <li><Link to="/terms" className="hover:text-white transition-colors">{t('footer.terms')}</Link></li>
@@ -169,7 +169,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
                   </div>
 
                   <div>
-                      <h4 className="font-bold text-lg mb-6">{t('footer.contact')}</h4>
+                      <h4 className="font-bold text-lg mb-6">{siteContent.footer?.contactTitle || t('footer.contact')}</h4>
                       <ul className="space-y-4 text-slate-400">
                           <li className="flex gap-3">
                               <MapPin size={20} className="text-brand-blue shrink-0" />
@@ -188,7 +188,9 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, onOpenAuth
               </div>
 
               <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                  <p className="text-slate-500 text-sm">© 2025 Lekòl Alèz. {t('footer.rights')}</p>
+                  <p className="text-slate-500 text-sm">
+                    © {new Date().getFullYear()} {siteContent.footer?.copyrightText || `Lekòl Alèz. ${t('footer.rights')}`}
+                  </p>
               </div>
           </div>
       </footer>

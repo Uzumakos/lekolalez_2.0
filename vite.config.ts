@@ -171,6 +171,227 @@ function adminSetupPlugin(supabaseUrl: string, serviceKey: string) {
           });
           return;
         }
+
+        if (req.url === '/api/admin/db-action' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: any) => { body += chunk; });
+          req.on('end', async () => {
+            res.setHeader('Content-Type', 'application/json');
+            try {
+              const authHeader = req.headers['authorization'] || '';
+              const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+              if (!token) {
+                res.statusCode = 401;
+                res.end(JSON.stringify({ error: 'Non authentifié' }));
+                return;
+              }
+
+              // 1. Verify caller session via Supabase Auth
+              const userResp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+                headers: {
+                  'apikey': serviceKey,
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              if (!userResp.ok) {
+                res.statusCode = 401;
+                res.end(JSON.stringify({ error: 'Session expirée ou invalide' }));
+                return;
+              }
+              const authUser = await userResp.json();
+
+              // 2. Check role in public.users (and auto-sync if missing)
+              const profResp = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${authUser.id}&select=id,email,role,first_name,last_name`, {
+                headers: {
+                  'apikey': serviceKey,
+                  'Authorization': `Bearer ${serviceKey}`
+                }
+              });
+              const profRows = await profResp.json();
+              const callerRole = Array.isArray(profRows) && profRows[0]?.role ? profRows[0].role : authUser.user_metadata?.role;
+
+              if ((!Array.isArray(profRows) || profRows.length === 0) && callerRole) {
+                await fetch(`${supabaseUrl}/rest/v1/users`, {
+                  method: 'POST',
+                  headers: {
+                    'apikey': serviceKey,
+                    'Authorization': `Bearer ${serviceKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'resolution=merge-duplicates'
+                  },
+                  body: JSON.stringify({
+                    id: authUser.id,
+                    email: authUser.email,
+                    first_name: authUser.user_metadata?.first_name || 'Admin',
+                    last_name: authUser.user_metadata?.last_name || 'User',
+                    role: callerRole,
+                    preferred_language: 'fr',
+                    password: '**managed_by_supabase_auth**',
+                    updated_at: new Date().toISOString()
+                  })
+                });
+              }
+
+              if (!['admin', 'super_admin', 'instructor'].includes(callerRole)) {
+                res.statusCode = 403;
+                res.end(JSON.stringify({ error: 'Privilèges insuffisants pour cette opération.' }));
+                return;
+              }
+
+              const { operation, id, payload, instructorUpdate } = JSON.parse(body || '{}');
+              const selectQuery = 'select=*,instructor:users!instructor_id(id,first_name,last_name,avatar,title,bio,location)';
+
+              if (operation === 'course_create') {
+                if (instructorUpdate && authUser.id) {
+                  await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${authUser.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'apikey': serviceKey,
+                      'Authorization': `Bearer ${serviceKey}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(instructorUpdate)
+                  });
+                }
+
+                let createRes = await fetch(`${supabaseUrl}/rest/v1/courses?${selectQuery}`, {
+                  method: 'POST',
+                  headers: {
+                    'apikey': serviceKey,
+                    'Authorization': `Bearer ${serviceKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                  },
+                  body: JSON.stringify(payload)
+                });
+
+                if (!createRes.ok) {
+                  const errText = await createRes.text();
+                  if (errText.includes('show_level')) {
+                    const { show_level: _, ...safePayload } = payload;
+                    createRes = await fetch(`${supabaseUrl}/rest/v1/courses?${selectQuery}`, {
+                      method: 'POST',
+                      headers: {
+                        'apikey': serviceKey,
+                        'Authorization': `Bearer ${serviceKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                      },
+                      body: JSON.stringify(safePayload)
+                    });
+                  } else {
+                    res.statusCode = createRes.status;
+                    res.end(errText);
+                    return;
+                  }
+                }
+
+                const rows = await createRes.json();
+                res.statusCode = 200;
+                res.end(JSON.stringify({ data: Array.isArray(rows) ? rows[0] : rows }));
+                return;
+              }
+
+              if (operation === 'course_update') {
+                if (instructorUpdate && id) {
+                  const cResp = await fetch(`${supabaseUrl}/rest/v1/courses?id=eq.${id}&select=instructor_id`, {
+                    headers: {
+                      'apikey': serviceKey,
+                      'Authorization': `Bearer ${serviceKey}`
+                    }
+                  });
+                  const cRows = await cResp.json();
+                  const instId = Array.isArray(cRows) && cRows[0]?.instructor_id ? cRows[0].instructor_id : authUser.id;
+                  if (instId) {
+                    await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${instId}`, {
+                      method: 'PATCH',
+                      headers: {
+                        'apikey': serviceKey,
+                        'Authorization': `Bearer ${serviceKey}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify(instructorUpdate)
+                    });
+                  }
+                }
+
+                let updateRes = await fetch(`${supabaseUrl}/rest/v1/courses?id=eq.${id}&${selectQuery}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'apikey': serviceKey,
+                    'Authorization': `Bearer ${serviceKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                  },
+                  body: JSON.stringify(payload)
+                });
+
+                if (!updateRes.ok) {
+                  const errText = await updateRes.text();
+                  if (errText.includes('show_level')) {
+                    const { show_level: _, ...safePayload } = payload;
+                    updateRes = await fetch(`${supabaseUrl}/rest/v1/courses?id=eq.${id}&${selectQuery}`, {
+                      method: 'PATCH',
+                      headers: {
+                        'apikey': serviceKey,
+                        'Authorization': `Bearer ${serviceKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                      },
+                      body: JSON.stringify(safePayload)
+                    });
+                  } else {
+                    res.statusCode = updateRes.status;
+                    res.end(errText);
+                    return;
+                  }
+                }
+
+                const rows = await updateRes.json();
+                res.statusCode = 200;
+                res.end(JSON.stringify({ data: Array.isArray(rows) ? rows[0] : rows }));
+                return;
+              }
+
+              if (operation === 'course_delete') {
+                const delRes = await fetch(`${supabaseUrl}/rest/v1/courses?id=eq.${id}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'apikey': serviceKey,
+                    'Authorization': `Bearer ${serviceKey}`
+                  }
+                });
+                res.statusCode = delRes.ok ? 200 : delRes.status;
+                res.end(JSON.stringify({ success: delRes.ok }));
+                return;
+              }
+
+              if (operation === 'site_content_upsert') {
+                const upsertRes = await fetch(`${supabaseUrl}/rest/v1/site_content?on_conflict=key`, {
+                  method: 'POST',
+                  headers: {
+                    'apikey': serviceKey,
+                    'Authorization': `Bearer ${serviceKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'resolution=merge-duplicates,return=representation'
+                  },
+                  body: JSON.stringify(payload)
+                });
+                const rows = await upsertRes.json();
+                res.statusCode = upsertRes.ok ? 200 : upsertRes.status;
+                res.end(JSON.stringify({ data: Array.isArray(rows) ? rows[0] : rows }));
+                return;
+              }
+
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'Opération non reconnue' }));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: err.message || 'Erreur serveur' }));
+            }
+          });
+          return;
+        }
         next();
       });
     }
