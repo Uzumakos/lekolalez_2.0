@@ -166,18 +166,31 @@ const Layout = ({
   onLogout: () => void,
   currentUser?: any
 }) => {
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 768;
+  const [isSidebarOpen, setSidebarOpen] = useState(() => !isMobile());
   const location = useLocation();
   const { t } = useLanguage();
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const isAdmin = userRole === 'admin' || isSuperAdmin;
 
+  // On mobile, close the sidebar after navigating so it doesn't cover the page
+  useEffect(() => {
+    if (isMobile()) setSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
+    <div className="flex h-screen h-[100dvh] w-full overflow-hidden bg-slate-50 font-sans text-slate-800">
+      {/* Mobile backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-10 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* Sidebar */}
       <motion.div
         animate={{ width: isSidebarOpen ? '260px' : '0px', opacity: isSidebarOpen ? 1 : 0 }}
-        className="bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden fixed md:relative z-20"
+        className="bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden fixed inset-y-0 left-0 md:relative z-20 shrink-0"
       >
         <div className="p-6">
           <BrandLogo className="h-10 w-auto" />
@@ -210,9 +223,9 @@ const Layout = ({
       </motion.div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden relative">
         {/* Navbar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-10">
+        <header className="h-16 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between gap-2 px-3 sm:px-6 z-10">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
               {isSidebarOpen ? <Menu size={20} /> : <Menu size={20} />}
@@ -222,7 +235,7 @@ const Layout = ({
               <input type="text" placeholder="Search courses..." className="bg-transparent border-none outline-none ml-2 text-sm w-full" />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             {/* Language Switcher in Dashboard */}
             <LanguageSwitcher variant="light" />
 
@@ -253,7 +266,7 @@ const Layout = ({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-3 sm:p-6 scrollbar-hide">
           {children}
         </main>
       </div>

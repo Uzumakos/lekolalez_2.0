@@ -105,14 +105,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
               </div>
 
               {/* Certificate Preview Wrapper */}
-              <div className="p-8 bg-gray-200 overflow-auto flex justify-center">
+              <div className="p-3 sm:p-8 bg-gray-200 overflow-auto">
                  {/* 
                     Actual Certificate DOM Element 
                     Aspect Ratio for A4 Landscape approx 1.414 : 1 
                  */}
                  <div 
                     ref={certificateRef}
-                    className="bg-white text-gray-800 w-[800px] h-[565px] shrink-0 relative p-8 shadow-xl border-[16px] border-double border-brand-dark/10"
+                    className="bg-white text-gray-800 w-[800px] h-[565px] shrink-0 mx-auto relative p-8 shadow-xl border-[16px] border-double border-brand-dark/10"
                     style={{ fontFamily: "'Playfair Display', serif" }}
                  >
                     {/* Ornamental Corners */}

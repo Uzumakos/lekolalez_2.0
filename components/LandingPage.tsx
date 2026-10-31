@@ -122,7 +122,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ featuredCourses, onOpe
     return (
         <>
             {/* Hero Section */}
-            <section className="relative h-screen w-full overflow-hidden flex items-center justify-center -mt-[80px]"> {/* Negative margin to go behind transparent nav */}
+            <section className="relative min-h-screen min-h-[100dvh] w-full overflow-hidden flex items-center justify-center -mt-[80px]"> {/* Negative margin to go behind transparent nav */}
                 <AnimatePresence mode='wait'>
                     {HERO_SLIDES.map((slide, index) => (
                         index === currentSlide && (

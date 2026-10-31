@@ -1304,7 +1304,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({
       {/* Reject Reason Modal */}
       {rejectModalSub && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-2">{t('admin.rejectModalTitle')}</h3>
             <p className="text-xs text-gray-500 mb-4">
               {t('admin.rejectModalDesc')} (<strong>{rejectModalSub.paymentReference}</strong> - {rejectModalSub.userName || rejectModalSub.userEmail})
@@ -1914,7 +1914,7 @@ export const AdminManagement: React.FC<AdminManagementProps> = ({
       {/* Password Management Modal */}
       {selectedPasswordUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-gray-100">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 bg-brand-blue/10 text-brand-blue rounded-xl">
